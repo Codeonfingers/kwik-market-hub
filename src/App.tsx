@@ -4,6 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
+import Markets from "./pages/Markets";
+import HowItWorks from "./pages/HowItWorks";
+import ConsumerApp from "./pages/consumer/ConsumerApp";
+import VendorDashboard from "./pages/vendor/VendorDashboard";
+import ShopperApp from "./pages/shopper/ShopperApp";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -16,7 +22,17 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/markets" element={<Markets />} />
+          <Route path="/markets/:id" element={<Markets />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/consumer" element={<ConsumerApp />} />
+          <Route path="/consumer/*" element={<ConsumerApp />} />
+          <Route path="/vendor" element={<VendorDashboard />} />
+          <Route path="/vendor/*" element={<VendorDashboard />} />
+          <Route path="/shopper" element={<ShopperApp />} />
+          <Route path="/shopper/*" element={<ShopperApp />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/*" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
