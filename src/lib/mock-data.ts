@@ -1,45 +1,66 @@
 import { Market, Product, Vendor, Order, Job } from "@/types";
 
+// These match the seeded data in the database
 export const markets: Market[] = [
   {
-    id: "1",
+    id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     name: "Makola Market",
     location: "Accra Central, Greater Accra",
     image: "https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=800",
-    description: "Ghana's largest and most vibrant open-air market, offering everything from fresh produce to fabrics.",
+    description: "The largest and most vibrant open-air market in Accra, known for textiles, foodstuffs, and household items.",
     operatingHours: "6:00 AM - 6:00 PM",
     vendorCount: 450,
     rating: 4.7,
   },
   {
-    id: "2",
+    id: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
     name: "Kaneshie Market",
     location: "Kaneshie, Accra",
     image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800",
-    description: "A bustling market known for its fresh vegetables, fish, and household items.",
+    description: "A major market hub in western Accra, popular for fresh produce, fish, and everyday essentials.",
     operatingHours: "5:30 AM - 7:00 PM",
     vendorCount: 280,
     rating: 4.5,
   },
   {
-    id: "3",
+    id: "c3d4e5f6-a7b8-9012-cdef-123456789012",
     name: "Kejetia Market",
     location: "Kumasi, Ashanti Region",
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800",
-    description: "West Africa's largest single-roof market with over 10,000 stores.",
+    description: "West Africa's largest single market, offering everything from traditional kente cloth to farm-fresh produce.",
     operatingHours: "6:00 AM - 8:00 PM",
     vendorCount: 890,
     rating: 4.8,
   },
   {
-    id: "4",
+    id: "d4e5f6a7-b8c9-0123-def0-234567890123",
     name: "Madina Market",
-    location: "Madina, Accra",
+    location: "Madina, Greater Accra",
     image: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800",
-    description: "Popular local market with affordable prices and friendly vendors.",
+    description: "A bustling market in the Madina area known for affordable prices and variety.",
     operatingHours: "6:00 AM - 6:30 PM",
     vendorCount: 320,
     rating: 4.3,
+  },
+  {
+    id: "e5f6a7b8-c9d0-1234-ef01-345678901234",
+    name: "Tema Market",
+    location: "Tema, Greater Accra",
+    image: "https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=800",
+    description: "A well-organized market serving the industrial city of Tema with fresh goods and imports.",
+    operatingHours: "6:00 AM - 7:00 PM",
+    vendorCount: 200,
+    rating: 4.4,
+  },
+  {
+    id: "f6a7b8c9-d0e1-2345-f012-456789012345",
+    name: "Takoradi Market Circle",
+    location: "Takoradi, Western Region",
+    image: "https://images.unsplash.com/photo-1608198093002-ad4e005f385d?w=800",
+    description: "The commercial heart of Takoradi with fish, palm oil, and regional specialties.",
+    operatingHours: "6:00 AM - 6:00 PM",
+    vendorCount: 350,
+    rating: 4.5,
   },
 ];
 
@@ -47,7 +68,7 @@ export const vendors: Vendor[] = [
   {
     id: "v1",
     userId: "u1",
-    marketId: "1",
+    marketId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     businessName: "Auntie Akua's Fresh Produce",
     description: "Fresh vegetables and fruits sourced daily from local farms.",
     image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400",
@@ -59,7 +80,7 @@ export const vendors: Vendor[] = [
   {
     id: "v2",
     userId: "u2",
-    marketId: "1",
+    marketId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     businessName: "Nana Yaw Spices",
     description: "Premium local and imported spices for every dish.",
     image: "https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400",
@@ -71,7 +92,7 @@ export const vendors: Vendor[] = [
   {
     id: "v3",
     userId: "u3",
-    marketId: "1",
+    marketId: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
     businessName: "Fresh Fish Corner",
     description: "Daily fresh fish from Tema Harbour.",
     image: "https://images.unsplash.com/photo-1510130113647-c4db5040b0cb?w=400",
@@ -167,7 +188,7 @@ export const sampleOrders: Order[] = [
   {
     id: "o1",
     consumerId: "c1",
-    marketId: "1",
+    marketId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     items: [
       {
         productId: "p1",
@@ -200,7 +221,7 @@ export const availableJobs: Job[] = [
   {
     id: "j1",
     orderId: "o1",
-    marketId: "1",
+    marketId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     itemCount: 5,
     vendorCount: 3,
     estimatedEarnings: 15,
@@ -210,7 +231,7 @@ export const availableJobs: Job[] = [
   {
     id: "j2",
     orderId: "o2",
-    marketId: "1",
+    marketId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     itemCount: 8,
     vendorCount: 4,
     estimatedEarnings: 22,
@@ -220,7 +241,7 @@ export const availableJobs: Job[] = [
   {
     id: "j3",
     orderId: "o3",
-    marketId: "1",
+    marketId: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
     itemCount: 3,
     vendorCount: 2,
     estimatedEarnings: 10,
@@ -229,13 +250,16 @@ export const availableJobs: Job[] = [
   },
 ];
 
+// Categories match the seeded database data
 export const categories = [
-  { id: "1", name: "Vegetables", icon: "🥬", count: 45 },
-  { id: "2", name: "Fruits", icon: "🍎", count: 32 },
-  { id: "3", name: "Fish & Seafood", icon: "🐟", count: 28 },
-  { id: "4", name: "Meat & Poultry", icon: "🍖", count: 24 },
-  { id: "5", name: "Spices", icon: "🌶️", count: 56 },
-  { id: "6", name: "Grains", icon: "🌾", count: 18 },
-  { id: "7", name: "Oils", icon: "🫒", count: 12 },
-  { id: "8", name: "Household", icon: "🧹", count: 67 },
+  { id: "11111111-1111-1111-1111-111111111111", name: "Vegetables", icon: "🥬", count: 45 },
+  { id: "22222222-2222-2222-2222-222222222222", name: "Fruits", icon: "🍎", count: 32 },
+  { id: "33333333-3333-3333-3333-333333333333", name: "Fish & Seafood", icon: "🐟", count: 28 },
+  { id: "44444444-4444-4444-4444-444444444444", name: "Meat & Poultry", icon: "🍖", count: 24 },
+  { id: "55555555-5555-5555-5555-555555555555", name: "Grains & Cereals", icon: "🌾", count: 18 },
+  { id: "66666666-6666-6666-6666-666666666666", name: "Spices & Seasonings", icon: "🌶️", count: 56 },
+  { id: "77777777-7777-7777-7777-777777777777", name: "Oils & Cooking", icon: "🫒", count: 12 },
+  { id: "88888888-8888-8888-8888-888888888888", name: "Tubers & Roots", icon: "🥔", count: 15 },
+  { id: "99999999-9999-9999-9999-999999999999", name: "Beans & Legumes", icon: "🫘", count: 20 },
+  { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", name: "Dairy & Eggs", icon: "🥚", count: 10 },
 ];

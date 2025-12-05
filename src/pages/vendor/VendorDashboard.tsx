@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -16,7 +16,10 @@ import {
   List,
   ChevronRight,
   LogOut,
-  Loader2
+  Loader2,
+  Upload,
+  Image as ImageIcon,
+  X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -33,6 +36,7 @@ import { useVendor } from "@/hooks/useVendor";
 import { useProducts } from "@/hooks/useProducts";
 import { useOrders } from "@/hooks/useOrders";
 import { useMarkets } from "@/hooks/useMarkets";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { Link } from "react-router-dom";
 import { OrderStatus } from "@/types";
 import { toast } from "sonner";
@@ -59,7 +63,11 @@ const VendorDashboard = () => {
     price: "",
     unit: "kg",
     description: "",
+    imageUrl: "",
   });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { uploadImage, uploading } = useImageUpload();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -91,6 +99,33 @@ const VendorDashboard = () => {
     }
   };
 
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload
+    const url = await uploadImage(file);
+    if (url) {
+      setProductForm({ ...productForm, imageUrl: url });
+      toast.success("Image uploaded successfully");
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview(null);
+    setProductForm({ ...productForm, imageUrl: "" });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleAddProduct = async () => {
     if (!vendor || !productForm.name || !productForm.price) {
       toast.error("Please fill in all required fields");
@@ -105,12 +140,13 @@ const VendorDashboard = () => {
       description: productForm.description,
       is_available: true,
       category_id: null,
-      image_url: null,
+      image_url: productForm.imageUrl || null,
       stock_quantity: null,
     });
 
     setShowAddProduct(false);
-    setProductForm({ name: "", price: "", unit: "kg", description: "" });
+    setProductForm({ name: "", price: "", unit: "kg", description: "", imageUrl: "" });
+    setImagePreview(null);
   };
 
   const handleSignOut = async () => {
@@ -369,11 +405,57 @@ const VendorDashboard = () => {
                       Add Product
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-md">
                     <DialogHeader>
                       <DialogTitle>Add New Product</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-4">
+                      {/* Image Upload */}
+                      <div className="space-y-2">
+                        <Label>Product Image</Label>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/jpeg,image/png,image/webp,image/gif"
+                          className="hidden"
+                          onChange={handleImageSelect}
+                        />
+                        {imagePreview ? (
+                          <div className="relative">
+                            <img 
+                              src={imagePreview} 
+                              alt="Preview" 
+                              className="w-full h-40 object-cover rounded-xl border"
+                            />
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-2 right-2 h-8 w-8"
+                              onClick={handleRemoveImage}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="w-full h-40 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-2 hover:border-primary hover:bg-primary/5 transition-colors disabled:opacity-50"
+                          >
+                            {uploading ? (
+                              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                            ) : (
+                              <>
+                                <Upload className="w-8 h-8 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Click to upload image</span>
+                                <span className="text-xs text-muted-foreground">JPG, PNG, WebP (max 5MB)</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
                       <div className="space-y-2">
                         <Label>Product Name *</Label>
                         <Input
@@ -395,7 +477,7 @@ const VendorDashboard = () => {
                         <div className="space-y-2">
                           <Label>Unit</Label>
                           <select
-                            className="w-full h-10 px-3 rounded-md border bg-background"
+                            className="w-full h-10 px-3 rounded-xl border bg-background"
                             value={productForm.unit}
                             onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
                           >
@@ -414,8 +496,20 @@ const VendorDashboard = () => {
                           onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                         />
                       </div>
-                      <Button variant="hero" className="w-full" onClick={handleAddProduct}>
-                        Add Product
+                      <Button 
+                        variant="hero" 
+                        className="w-full" 
+                        onClick={handleAddProduct}
+                        disabled={uploading}
+                      >
+                        {uploading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          "Add Product"
+                        )}
                       </Button>
                     </div>
                   </DialogContent>
