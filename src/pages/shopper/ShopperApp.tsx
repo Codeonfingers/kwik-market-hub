@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { 
   Briefcase, 
   MapPin, 
@@ -12,7 +13,9 @@ import {
   Star,
   Package,
   TrendingUp,
-  CircleDollarSign
+  CircleDollarSign,
+  LogOut,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,31 +23,135 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import StatsCard from "@/components/shared/StatsCard";
-import { availableJobs, markets } from "@/lib/mock-data";
-import { Job } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useShopperJobs, JobWithOrder } from "@/hooks/useShopperJobs";
+import { useMarkets } from "@/hooks/useMarkets";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 const ShopperApp = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { shopper, availableJobs, myJobs, loading, createShopperProfile, acceptJob, completeJob } = useShopperJobs();
+  const { markets } = useMarkets();
+  
   const [isAvailable, setIsAvailable] = useState(true);
-  const [currentJob, setCurrentJob] = useState<Job | null>(null);
+  const [currentJob, setCurrentJob] = useState<JobWithOrder | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [selectedMarketId, setSelectedMarketId] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (!loading && !shopper && user) {
+      setShowOnboarding(true);
+    }
+  }, [loading, shopper, user]);
+
+  useEffect(() => {
+    // Find active job
+    const activeJob = myJobs.find((j) => j.status !== "completed");
+    setCurrentJob(activeJob || null);
+  }, [myJobs]);
+
+  const handleCreateShopper = async () => {
+    if (!selectedMarketId) {
+      toast.error("Please select a market");
+      return;
+    }
+
+    const { error } = await createShopperProfile(selectedMarketId);
+    if (!error) {
+      setShowOnboarding(false);
+    }
+  };
+
+  const handleAcceptJob = async (job: JobWithOrder) => {
+    const { error } = await acceptJob(job.id);
+    if (!error) {
+      setCurrentJob(job);
+    }
+  };
+
+  const handleCompleteJob = async () => {
+    if (!currentJob) return;
+    
+    const { error } = await completeJob(currentJob.id);
+    if (!error) {
+      setCurrentJob(null);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const completedJobs = myJobs.filter((j) => j.status === "completed");
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + Number(j.commission_amount || 0), 0);
 
   const stats = [
-    { title: "Today's Earnings", value: "₵125", icon: CircleDollarSign, variant: "gold" as const },
-    { title: "Jobs Completed", value: "8", icon: CheckCircle2, variant: "market" as const },
-    { title: "Rating", value: "4.9", icon: Star, variant: "primary" as const },
-    { title: "Active Time", value: "5h 30m", icon: Clock, variant: "default" as const },
+    { title: "Today's Earnings", value: `₵${totalEarnings.toFixed(0)}`, icon: CircleDollarSign, variant: "gold" as const },
+    { title: "Jobs Completed", value: String(completedJobs.length), icon: CheckCircle2, variant: "market" as const },
+    { title: "Rating", value: shopper?.rating?.toString() || "0", icon: Star, variant: "primary" as const },
+    { title: "Total Deliveries", value: String(shopper?.total_deliveries || 0), icon: Package, variant: "default" as const },
   ];
 
-  const handleAcceptJob = (job: Job) => {
-    setCurrentJob(job);
-    toast.success(`Accepted job for ${job.consumerName}`);
-  };
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const handleCompleteStep = (step: string) => {
-    toast.success(`${step} completed!`);
-  };
+  // Onboarding Modal
+  if (showOnboarding) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          <Card variant="elevated">
+            <CardHeader className="text-center">
+              <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4">
+                <Briefcase className="w-8 h-8 text-gold-foreground" />
+              </div>
+              <CardTitle className="font-display text-2xl">Become a Shopper</CardTitle>
+              <p className="text-muted-foreground">Start earning by helping customers get their orders</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Select Your Market *</Label>
+                <select
+                  className="w-full h-10 px-3 rounded-md border bg-background"
+                  value={selectedMarketId}
+                  onChange={(e) => setSelectedMarketId(e.target.value)}
+                >
+                  <option value="">Choose a market</option>
+                  {markets.map((market) => (
+                    <option key={market.id} value={market.id}>{market.name}</option>
+                  ))}
+                </select>
+              </div>
+              <Button variant="hero" className="w-full" onClick={handleCreateShopper}>
+                Start Shopping
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,7 +167,7 @@ const ShopperApp = () => {
               </Link>
               <div>
                 <h1 className="font-display text-xl font-bold">Shopper App</h1>
-                <p className="text-sm text-muted-foreground">Kwame Asante</p>
+                <p className="text-sm text-muted-foreground">Ready to earn!</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -71,6 +178,9 @@ const ShopperApp = () => {
                 checked={isAvailable}
                 onCheckedChange={setIsAvailable}
               />
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                <LogOut className="w-5 h-5" />
+              </Button>
             </div>
           </div>
         </div>
@@ -92,13 +202,13 @@ const ShopperApp = () => {
                       Active Job
                     </Badge>
                     <h2 className="font-display text-2xl font-bold">
-                      Order for {currentJob.consumerName}
+                      Order {currentJob.order?.order_number}
                     </h2>
-                    <p className="opacity-80">{currentJob.itemCount} items from {currentJob.vendorCount} vendors</p>
+                    <p className="opacity-80">Items to collect</p>
                   </div>
                   <div className="text-right">
                     <p className="opacity-80 text-sm">Earnings</p>
-                    <p className="font-display text-3xl font-bold">₵{currentJob.estimatedEarnings}</p>
+                    <p className="font-display text-3xl font-bold">₵{Number(currentJob.commission_amount || 0).toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -116,19 +226,6 @@ const ShopperApp = () => {
                       <Package className="w-5 h-5" />
                     </div>
                     <span className="flex-1 font-semibold">Collect from vendors</span>
-                    <Button 
-                      size="sm" 
-                      className="bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                      onClick={() => handleCompleteStep("Collection")}
-                    >
-                      Mark Done
-                    </Button>
-                  </div>
-                  <div className="flex items-center gap-3 opacity-60">
-                    <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-                      <Camera className="w-5 h-5" />
-                    </div>
-                    <span className="flex-1">Upload photos for inspection</span>
                   </div>
                   <div className="flex items-center gap-3 opacity-60">
                     <div className="w-8 h-8 rounded-full bg-primary-foreground/20 flex items-center justify-center">
@@ -137,6 +234,13 @@ const ShopperApp = () => {
                     <span className="flex-1">Hand over to customer</span>
                   </div>
                 </div>
+
+                <Button 
+                  className="w-full mt-6 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                  onClick={handleCompleteJob}
+                >
+                  Mark as Completed
+                </Button>
               </CardContent>
             </Card>
           </motion.div>
@@ -178,46 +282,52 @@ const ShopperApp = () => {
                   <Badge variant="active">{availableJobs.length} available</Badge>
                 </div>
 
-                {availableJobs.map((job, index) => (
-                  <motion.div
-                    key={job.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card variant="elevated">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold text-lg">{job.consumerName}</h3>
-                              <Badge variant="secondary">{job.itemCount} items</Badge>
+                {availableJobs.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                    <h3 className="font-display text-xl font-bold mb-2">No jobs available</h3>
+                    <p className="text-muted-foreground">Check back soon for new orders!</p>
+                  </div>
+                ) : (
+                  availableJobs.map((job, index) => (
+                    <motion.div
+                      key={job.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card variant="elevated">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-lg">Order {job.order?.order_number}</h3>
+                                <Badge variant="secondary">Items to collect</Badge>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <MapPin className="w-4 h-4" />
+                                <span>Market delivery</span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <MapPin className="w-4 h-4" />
-                              <span>{markets[0].name}</span>
-                              <span>•</span>
-                              <span>{job.vendorCount} vendors</span>
+                            <div className="text-right">
+                              <p className="font-display text-2xl font-bold text-market">
+                                ₵{Number(job.commission_amount || 0).toFixed(2)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Est. earnings</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-display text-2xl font-bold text-market">
-                              ₵{job.estimatedEarnings}
-                            </p>
-                            <p className="text-xs text-muted-foreground">Est. earnings</p>
-                          </div>
-                        </div>
-                        <Button 
-                          variant="gold" 
-                          className="w-full"
-                          onClick={() => handleAcceptJob(job)}
-                        >
-                          Accept Job
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
+                          <Button 
+                            variant="gold" 
+                            className="w-full"
+                            onClick={() => handleAcceptJob(job)}
+                          >
+                            Accept Job
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))
+                )}
               </>
             )}
 
@@ -234,53 +344,50 @@ const ShopperApp = () => {
           <TabsContent value="history" className="space-y-4">
             <h2 className="font-display text-xl font-bold mb-4">Completed Jobs</h2>
             
-            {[1, 2, 3, 4, 5].map((_, index) => (
-              <Card key={index} variant="default">
-                <CardContent className="p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
-                      <CheckCircle2 className="w-5 h-5 text-success" />
+            {completedJobs.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="font-display text-xl font-bold mb-2">No completed jobs yet</h3>
+                <p className="text-muted-foreground">Your completed jobs will appear here.</p>
+              </div>
+            ) : (
+              completedJobs.map((job, index) => (
+                <Card key={job.id} variant="default">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-success" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">Order {job.order?.order_number}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(job.delivered_at || job.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-semibold">Order #{1000 + index}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {5 - index} items • {new Date(Date.now() - index * 86400000).toLocaleDateString()}
-                      </p>
+                    <div className="text-right">
+                      <p className="font-bold text-market">₵{Number(job.commission_amount || 0).toFixed(2)}</p>
+                      <div className="flex items-center gap-1 text-xs text-gold">
+                        <Star className="w-3 h-3 fill-current" />
+                        <span>5.0</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-market">₵{15 + index * 5}</p>
-                    <div className="flex items-center gap-1 text-xs text-gold">
-                      <Star className="w-3 h-3 fill-current" />
-                      <span>5.0</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="earnings" className="space-y-6">
             <Card variant="gradient">
               <CardHeader>
-                <CardTitle>This Week's Earnings</CardTitle>
+                <CardTitle>Total Earnings</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-display font-bold text-primary mb-4">₵875</div>
+                <div className="text-4xl font-display font-bold text-primary mb-4">₵{totalEarnings.toFixed(2)}</div>
                 <div className="flex items-center gap-2 text-success text-sm mb-6">
                   <TrendingUp className="w-4 h-4" />
-                  <span>+23% from last week</span>
-                </div>
-                <div className="space-y-3">
-                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => (
-                    <div key={day} className="flex items-center gap-3">
-                      <span className="w-8 text-sm text-muted-foreground">{day}</span>
-                      <Progress value={20 + Math.random() * 70} className="h-3 flex-1" />
-                      <span className="text-sm font-medium w-12 text-right">
-                        ₵{Math.floor(80 + Math.random() * 70)}
-                      </span>
-                    </div>
-                  ))}
+                  <span>From {completedJobs.length} completed jobs</span>
                 </div>
               </CardContent>
             </Card>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { 
   Search, 
   ShoppingCart, 
@@ -7,7 +8,10 @@ import {
   ChevronRight,
   Plus,
   Clock,
-  Package
+  Package,
+  LogOut,
+  Loader2,
+  CreditCard
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,39 +21,110 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductCard from "@/components/shared/ProductCard";
 import CategoryPill from "@/components/shared/CategoryPill";
 import OrderStatusBadge from "@/components/shared/OrderStatusBadge";
-import { markets, products, categories, sampleOrders } from "@/lib/mock-data";
-import { Product } from "@/types";
+import MomoPaymentModal from "@/components/shared/MomoPaymentModal";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOrders } from "@/hooks/useOrders";
+import { useProducts } from "@/hooks/useProducts";
+import { useMarkets } from "@/hooks/useMarkets";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { OrderStatus } from "@/types";
+
+interface CartItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  unit: string;
+}
 
 const ConsumerApp = () => {
-  const [selectedMarket, setSelectedMarket] = useState(markets[0]);
+  const navigate = useNavigate();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { orders, loading: ordersLoading, createOrder } = useOrders();
+  const { products, categories, loading: productsLoading } = useProducts();
+  const { markets, loading: marketsLoading } = useMarkets();
+  
+  const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentModal, setPaymentModal] = useState<{ open: boolean; orderId: string; amount: number }>({
+    open: false,
+    orderId: "",
+    amount: 0,
+  });
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (markets.length > 0 && !selectedMarketId) {
+      setSelectedMarketId(markets[0].id);
+    }
+  }, [markets, selectedMarketId]);
+
+  const selectedMarket = markets.find((m) => m.id === selectedMarketId);
 
   const filteredProducts = products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = !selectedCategory || product.category === selectedCategory;
+    const matchesCategory = !selectedCategory || product.category_id === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddToCart = (product: Product, quantity: number) => {
-    const existingIndex = cart.findIndex((item) => item.product.id === product.id);
+  const handleAddToCart = (productId: string, productName: string, unitPrice: number, unit: string, quantity: number) => {
+    const existingIndex = cart.findIndex((item) => item.productId === productId);
     if (existingIndex >= 0) {
       const newCart = [...cart];
       newCart[existingIndex].quantity += quantity;
       setCart(newCart);
     } else {
-      setCart([...cart, { product, quantity }]);
+      setCart([...cart, { productId, productName, quantity, unitPrice, unit }]);
     }
-    toast.success(`Added ${quantity} ${product.unit} of ${product.name} to cart`);
+    toast.success(`Added ${quantity} ${unit} of ${productName} to cart`);
   };
 
-  const cartTotal = cart.reduce(
-    (sum, item) => sum + item.product.price * item.quantity,
-    0
-  );
+  const cartTotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+
+  const handleCheckout = async () => {
+    if (!selectedMarketId || cart.length === 0) return;
+
+    // For now, use the first vendor (in real app, would group by vendor)
+    const vendorId = products[0]?.vendor_id;
+    if (!vendorId) {
+      toast.error("No vendor available");
+      return;
+    }
+
+    const { data, error } = await createOrder(vendorId, selectedMarketId, cart);
+    
+    if (!error && data) {
+      setCart([]);
+      setPaymentModal({
+        open: true,
+        orderId: data.id,
+        amount: Number(data.total),
+      });
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const loading = ordersLoading || productsLoading || marketsLoading;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -79,7 +154,7 @@ const ConsumerApp = () => {
               </div>
             </div>
 
-            <Link to="/consumer/cart">
+            <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {cart.length > 0 && (
@@ -88,18 +163,23 @@ const ConsumerApp = () => {
                   </span>
                 )}
               </Button>
-            </Link>
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Market Selector */}
-          <div className="mt-3 flex items-center gap-2 text-sm">
-            <MapPin className="w-4 h-4 text-primary" />
-            <span className="text-muted-foreground">Shopping at</span>
-            <Button variant="link" className="p-0 h-auto font-semibold">
-              {selectedMarket.name}
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
+          {selectedMarket && (
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-primary" />
+              <span className="text-muted-foreground">Shopping at</span>
+              <Button variant="link" className="p-0 h-auto font-semibold">
+                {selectedMarket.name}
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -122,14 +202,14 @@ const ConsumerApp = () => {
                   isActive={!selectedCategory}
                   onClick={() => setSelectedCategory(null)}
                 />
-                {categories.slice(0, 6).map((category) => (
+                {categories.map((category) => (
                   <CategoryPill
                     key={category.id}
-                    icon={category.icon}
+                    icon={category.icon || "📦"}
                     name={category.name}
-                    count={category.count}
-                    isActive={selectedCategory === category.name}
-                    onClick={() => setSelectedCategory(category.name)}
+                    count={products.filter((p) => p.category_id === category.id).length}
+                    isActive={selectedCategory === category.id}
+                    onClick={() => setSelectedCategory(category.id)}
                   />
                 ))}
               </div>
@@ -139,83 +219,125 @@ const ConsumerApp = () => {
             <section>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-xl font-bold">
-                  {selectedCategory || "All Products"}
+                  {selectedCategory 
+                    ? categories.find((c) => c.id === selectedCategory)?.name 
+                    : "All Products"}
                 </h2>
                 <Badge variant="secondary">{filteredProducts.length} items</Badge>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredProducts.map((product, index) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    index={index}
-                    onAddToCart={handleAddToCart}
-                  />
-                ))}
-              </div>
+              
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="text-center py-12">
+                  <Package className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="font-display text-xl font-bold mb-2">No products yet</h3>
+                  <p className="text-muted-foreground">Check back soon for fresh products!</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filteredProducts.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      product={{
+                        id: product.id,
+                        name: product.name,
+                        price: Number(product.price),
+                        unit: product.unit || "piece",
+                        image: product.image_url || "/placeholder.svg",
+                        category: categories.find((c) => c.id === product.category_id)?.name || "",
+                        vendorId: product.vendor_id,
+                        available: product.is_available ?? true,
+                        description: product.description || "",
+                        priceHistory: [],
+                      }}
+                      index={index}
+                      onAddToCart={(p, qty) => handleAddToCart(p.id, p.name, p.price, p.unit, qty)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-4">
             <h2 className="font-display text-xl font-bold mb-4">Your Orders</h2>
             
-            {sampleOrders.map((order) => (
-              <motion.div
-                key={order.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card variant="elevated">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Order #{order.id}</CardTitle>
-                        <p className="text-sm text-muted-foreground">
-                          {order.items.length} items • {selectedMarket.name}
-                        </p>
-                      </div>
-                      <OrderStatusBadge status={order.status} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {order.items.slice(0, 2).map((item, index) => (
-                        <div key={index} className="flex justify-between text-sm">
-                          <span>{item.quantity} {item.unit} {item.productName}</span>
-                          <span className="font-medium">₵{item.estimatedPrice}</span>
-                        </div>
-                      ))}
-                      {order.items.length > 2 && (
-                        <p className="text-sm text-muted-foreground">
-                          +{order.items.length - 2} more items
-                        </p>
-                      )}
-                    </div>
-                    <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Estimated Total</p>
-                        <p className="font-display text-xl font-bold">₵{order.totalEstimate}</p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        Track Order
-                        <ChevronRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-
-            {sampleOrders.length === 0 && (
+            {ordersLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : orders.length === 0 ? (
               <div className="text-center py-12">
                 <Clock className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
                 <h3 className="font-display text-xl font-bold mb-2">No orders yet</h3>
                 <p className="text-muted-foreground mb-6">Start shopping to see your orders here.</p>
-                <Button variant="hero">
-                  <Plus className="w-4 h-4" />
-                  Create Order
-                </Button>
               </div>
+            ) : (
+              orders.map((order) => (
+                <motion.div
+                  key={order.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Card variant="elevated">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-lg">Order {order.order_number}</CardTitle>
+                          <p className="text-sm text-muted-foreground">
+                            {order.items?.length || 0} items
+                          </p>
+                        </div>
+                        <OrderStatusBadge status={order.status as OrderStatus} />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        {order.items?.slice(0, 2).map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span>{item.quantity}x {item.product_name}</span>
+                            <span className="font-medium">₵{Number(item.total_price).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        {(order.items?.length || 0) > 2 && (
+                          <p className="text-sm text-muted-foreground">
+                            +{(order.items?.length || 0) - 2} more items
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total</p>
+                          <p className="font-display text-xl font-bold">₵{Number(order.total).toFixed(2)}</p>
+                        </div>
+                        {order.status === "inspecting" && (
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={() => setPaymentModal({
+                              open: true,
+                              orderId: order.id,
+                              amount: Number(order.total),
+                            })}
+                          >
+                            <CreditCard className="w-4 h-4" />
+                            Pay Now
+                          </Button>
+                        )}
+                        {order.status !== "inspecting" && (
+                          <Button variant="outline" size="sm">
+                            Track Order
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
             )}
           </TabsContent>
         </Tabs>
@@ -228,15 +350,22 @@ const ConsumerApp = () => {
           animate={{ y: 0, opacity: 1 }}
           className="fixed bottom-6 left-4 right-4 z-50"
         >
-          <Link to="/consumer/cart">
-            <Button variant="hero" className="w-full h-16 text-lg shadow-glow">
-              <ShoppingCart className="w-6 h-6" />
-              View Cart ({cart.length} items)
-              <span className="ml-auto">₵{cartTotal.toFixed(2)}</span>
-            </Button>
-          </Link>
+          <Button variant="hero" className="w-full h-16 text-lg shadow-glow" onClick={handleCheckout}>
+            <ShoppingCart className="w-6 h-6" />
+            Checkout ({cart.length} items)
+            <span className="ml-auto">₵{cartTotal.toFixed(2)}</span>
+          </Button>
         </motion.div>
       )}
+
+      {/* Payment Modal */}
+      <MomoPaymentModal
+        open={paymentModal.open}
+        onClose={() => setPaymentModal({ open: false, orderId: "", amount: 0 })}
+        orderId={paymentModal.orderId}
+        amount={paymentModal.amount}
+        onSuccess={() => {}}
+      />
     </div>
   );
 };
