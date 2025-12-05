@@ -1,129 +1,136 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* KwikMarket African-Inspired Color Palette */
-    --background: 35 30% 97%;
-    --foreground: 25 30% 12%;
+    /* KwikMarket Brand Colors */
+    --background: 0 0% 100%;
+    --foreground: 25 20% 15%;
 
-    --card: 35 40% 99%;
-    --card-foreground: 25 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 25 20% 15%;
 
-    --popover: 35 40% 99%;
-    --popover-foreground: 25 30% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 25 20% 15%;
 
-    /* Terracotta Orange - Primary */
-    --primary: 18 76% 52%;
-    --primary-foreground: 35 40% 99%;
+    /* KwikMarket Green - Primary */
+    --primary: 152 61% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Warm Sand - Secondary */
-    --secondary: 35 35% 90%;
-    --secondary-foreground: 25 30% 20%;
+    /* Orange - Secondary */
+    --secondary: 32 100% 50%;
+    --secondary-foreground: 0 0% 100%;
 
-    /* Muted Warm Gray */
-    --muted: 35 20% 92%;
-    --muted-foreground: 25 15% 45%;
+    /* Light Gray - Muted */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
 
     /* Gold Accent */
-    --accent: 42 90% 55%;
-    --accent-foreground: 25 30% 12%;
+    --accent: 42 100% 51%;
+    --accent-foreground: 25 20% 15%;
 
-    /* Forest Green - Success */
-    --success: 145 55% 35%;
-    --success-foreground: 35 40% 99%;
+    /* Success Green */
+    --success: 152 61% 45%;
+    --success-foreground: 0 0% 100%;
 
-    /* Kente Gold */
-    --gold: 42 95% 50%;
-    --gold-foreground: 25 30% 12%;
+    /* Gold */
+    --gold: 42 100% 51%;
+    --gold-foreground: 25 20% 15%;
 
     /* Market Green */
-    --market: 155 45% 40%;
-    --market-foreground: 35 40% 99%;
+    --market: 152 61% 45%;
+    --market-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 35 40% 99%;
+    /* Earth Brown */
+    --earth: 30 32% 36%;
+    --earth-foreground: 0 0% 100%;
 
-    --border: 35 25% 85%;
-    --input: 35 25% 85%;
-    --ring: 18 76% 52%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
 
-    --radius: 1rem;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 152 61% 45%;
+
+    --radius: 0.75rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(18 76% 52%) 0%, hsl(42 90% 55%) 100%);
-    --gradient-hero: linear-gradient(180deg, hsl(35 30% 97%) 0%, hsl(35 40% 92%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(35 40% 99%) 0%, hsl(35 35% 96%) 100%);
-    --gradient-market: linear-gradient(135deg, hsl(155 45% 40%) 0%, hsl(145 55% 35%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(42 95% 50%) 0%, hsl(35 85% 45%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(152 61% 45%) 0%, hsl(152 61% 35%) 100%);
+    --gradient-secondary: linear-gradient(135deg, hsl(32 100% 50%) 0%, hsl(42 100% 51%) 100%);
+    --gradient-hero: linear-gradient(180deg, hsl(152 61% 97%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
+    --gradient-market: linear-gradient(135deg, hsl(152 61% 45%) 0%, hsl(152 61% 55%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(42 100% 51%) 0%, hsl(32 100% 50%) 100%);
 
     /* Shadows */
-    --shadow-sm: 0 2px 8px -2px hsl(25 30% 12% / 0.08);
-    --shadow-md: 0 4px 16px -4px hsl(25 30% 12% / 0.12);
-    --shadow-lg: 0 8px 32px -8px hsl(25 30% 12% / 0.16);
-    --shadow-glow: 0 0 40px hsl(18 76% 52% / 0.2);
-    --shadow-gold: 0 4px 20px hsl(42 90% 55% / 0.3);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-glow: 0 0 20px hsl(152 61% 45% / 0.3);
+    --shadow-gold: 0 4px 14px hsl(42 100% 51% / 0.3);
 
     /* Sidebar */
-    --sidebar-background: 35 35% 98%;
-    --sidebar-foreground: 25 30% 20%;
-    --sidebar-primary: 18 76% 52%;
-    --sidebar-primary-foreground: 35 40% 99%;
-    --sidebar-accent: 35 35% 94%;
-    --sidebar-accent-foreground: 25 30% 20%;
-    --sidebar-border: 35 25% 88%;
-    --sidebar-ring: 18 76% 52%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 25 20% 15%;
+    --sidebar-primary: 152 61% 45%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 152 61% 97%;
+    --sidebar-accent-foreground: 152 61% 35%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 152 61% 45%;
   }
 
   .dark {
-    --background: 25 25% 8%;
-    --foreground: 35 30% 95%;
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
 
-    --card: 25 20% 12%;
-    --card-foreground: 35 30% 95%;
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
 
-    --popover: 25 20% 12%;
-    --popover-foreground: 35 30% 95%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 18 76% 55%;
-    --primary-foreground: 25 25% 8%;
+    --primary: 152 61% 50%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 25 20% 18%;
-    --secondary-foreground: 35 30% 90%;
+    --secondary: 32 100% 55%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 25 15% 20%;
-    --muted-foreground: 35 20% 60%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 42 85% 50%;
-    --accent-foreground: 25 25% 8%;
+    --accent: 42 100% 55%;
+    --accent-foreground: 222 47% 11%;
 
-    --success: 145 50% 45%;
-    --success-foreground: 25 25% 8%;
+    --success: 152 61% 50%;
+    --success-foreground: 222 47% 11%;
 
-    --gold: 42 90% 55%;
-    --gold-foreground: 25 25% 8%;
+    --gold: 42 100% 55%;
+    --gold-foreground: 222 47% 11%;
 
-    --market: 155 40% 45%;
-    --market-foreground: 25 25% 8%;
+    --market: 152 61% 50%;
+    --market-foreground: 222 47% 11%;
 
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 35 30% 95%;
+    --earth: 30 25% 50%;
+    --earth-foreground: 222 47% 11%;
 
-    --border: 25 15% 22%;
-    --input: 25 15% 22%;
-    --ring: 18 76% 55%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
 
-    --sidebar-background: 25 20% 10%;
-    --sidebar-foreground: 35 30% 90%;
-    --sidebar-primary: 18 76% 55%;
-    --sidebar-primary-foreground: 25 25% 8%;
-    --sidebar-accent: 25 15% 16%;
-    --sidebar-accent-foreground: 35 30% 90%;
-    --sidebar-border: 25 15% 18%;
-    --sidebar-ring: 18 76% 55%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 152 61% 50%;
+
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 152 61% 50%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 152 61% 50%;
   }
 }
 
@@ -143,11 +150,15 @@
 
 @layer components {
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50 shadow-md;
+    @apply bg-card/95 backdrop-blur-lg border border-border/50 shadow-md;
   }
 
   .gradient-primary {
     background: var(--gradient-primary);
+  }
+
+  .gradient-secondary {
+    background: var(--gradient-secondary);
   }
 
   .gradient-hero {
@@ -170,33 +181,13 @@
     box-shadow: var(--shadow-gold);
   }
 
-  /* Kente-inspired pattern */
-  .kente-pattern {
-    background-image: 
-      repeating-linear-gradient(
-        90deg,
-        transparent,
-        transparent 20px,
-        hsl(var(--primary) / 0.05) 20px,
-        hsl(var(--primary) / 0.05) 22px
-      ),
-      repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 20px,
-        hsl(var(--gold) / 0.05) 20px,
-        hsl(var(--gold) / 0.05) 22px
-      );
-  }
-
   /* Market card hover effect */
   .market-card {
     @apply transition-all duration-300 ease-out;
   }
 
   .market-card:hover {
-    @apply -translate-y-1;
-    box-shadow: var(--shadow-lg);
+    @apply -translate-y-1 shadow-lg;
   }
 
   /* Status badges */
@@ -211,12 +202,27 @@
   .status-completed {
     @apply bg-success/20 text-success border border-success/30;
   }
+
+  /* Big touch-friendly buttons */
+  .btn-touch {
+    @apply min-h-[48px] min-w-[48px] text-base font-semibold;
+  }
+
+  /* Large readable text */
+  .text-readable {
+    @apply text-base md:text-lg leading-relaxed;
+  }
 }
 
 @layer utilities {
   .text-gradient {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-primary);
+  }
+
+  .text-gradient-secondary {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-secondary);
   }
 
   .animate-float {
@@ -237,6 +243,10 @@
 
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
+  }
+
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
   }
 }
 
@@ -286,5 +296,14 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
   }
 }

@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ["Bricolage Grotesque", "sans-serif"],
-        body: ["Outfit", "sans-serif"],
+        display: ["Poppins", "DM Sans", "sans-serif"],
+        body: ["Inter", "Open Sans", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -55,6 +55,10 @@ export default {
           DEFAULT: "hsl(var(--market))",
           foreground: "hsl(var(--market-foreground))",
         },
+        earth: {
+          DEFAULT: "hsl(var(--earth))",
+          foreground: "hsl(var(--earth-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -80,13 +84,18 @@ export default {
         sm: "calc(var(--radius) - 4px)",
         xl: "calc(var(--radius) + 4px)",
         "2xl": "calc(var(--radius) + 8px)",
+        "3xl": "1.5rem",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
         md: "var(--shadow-md)",
         lg: "var(--shadow-lg)",
+        xl: "var(--shadow-xl)",
         glow: "var(--shadow-glow)",
         gold: "var(--shadow-gold)",
+      },
+      fontSize: {
+        "2xs": ["0.625rem", { lineHeight: "0.75rem" }],
       },
       keyframes: {
         "accordion-down": {
