@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -19,7 +19,11 @@ import {
   MapPin,
   Eye,
   LogOut,
-  Loader2
+  Loader2,
+  XCircle,
+  RefreshCw,
+  UserCheck,
+  Ban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,9 +32,19 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import StatsCard from "@/components/shared/StatsCard";
+import OrderFilters from "@/components/shared/OrderFilters";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMarkets } from "@/hooks/useMarkets";
+import { useAdminData } from "@/hooks/useAdminData";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -38,35 +52,112 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { markets } = useMarkets();
+  const { 
+    vendors, 
+    shoppers, 
+    orders, 
+    stats, 
+    loading,
+    verifyVendor,
+    verifyShopper,
+    toggleVendorActive,
+    toggleShopperAvailable,
+    refetch
+  } = useAdminData();
+  
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Auth and role check is handled by ProtectedRoute wrapper
+  const [activeTab, setActiveTab] = useState("overview");
+  const [sidebarTab, setSidebarTab] = useState("Dashboard");
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userDetailModal, setUserDetailModal] = useState(false);
+  
+  // Order filters
+  const [orderSearchQuery, setOrderSearchQuery] = useState("");
+  const [orderStatus, setOrderStatus] = useState("all");
+  const [orderDateRange, setOrderDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  });
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const stats = [
-    { title: "Total Revenue", value: "₵125,430", icon: DollarSign, variant: "primary" as const, trend: { value: 15, isPositive: true } },
-    { title: "Active Orders", value: "156", icon: Package, variant: "market" as const, trend: { value: 8, isPositive: true } },
-    { title: "Verified Vendors", value: "1,245", icon: Store, variant: "gold" as const },
-    { title: "Active Shoppers", value: "342", icon: Briefcase, variant: "default" as const },
+  // Filter orders
+  const filteredOrders = useMemo(() => {
+    return orders.filter((order) => {
+      const matchesSearch = order.order_number.toLowerCase().includes(orderSearchQuery.toLowerCase());
+      const matchesStatus = orderStatus === "all" || order.status === orderStatus;
+      
+      let matchesDate = true;
+      if (orderDateRange.from) {
+        const orderDate = new Date(order.created_at);
+        matchesDate = orderDate >= orderDateRange.from;
+        if (orderDateRange.to) {
+          matchesDate = matchesDate && orderDate <= orderDateRange.to;
+        }
+      }
+      
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [orders, orderSearchQuery, orderStatus, orderDateRange]);
+
+  // Pending verifications
+  const pendingVendors = vendors.filter((v) => !v.is_verified);
+  const pendingShoppers = shoppers.filter((s) => !s.is_verified);
+  const allPending = [
+    ...pendingVendors.map((v) => ({ ...v, type: "vendor" as const })),
+    ...pendingShoppers.map((s) => ({ ...s, type: "shopper" as const })),
   ];
 
-  const recentActivities = [
-    { type: "vendor", action: "New vendor registered", user: "Kwame's Fish Corner", time: "2 mins ago" },
-    { type: "order", action: "Large order completed", user: "Order #12456", time: "15 mins ago" },
-    { type: "dispute", action: "Dispute opened", user: "Order #12389", time: "1 hour ago" },
-    { type: "shopper", action: "Shopper verified", user: "Ama Mensah", time: "2 hours ago" },
+  const dashboardStats = [
+    { 
+      title: "Total Revenue", 
+      value: `₵${stats.totalRevenue.toLocaleString()}`, 
+      icon: DollarSign, 
+      variant: "primary" as const, 
+      trend: { value: 15, isPositive: true } 
+    },
+    { 
+      title: "Active Orders", 
+      value: String(stats.activeOrders), 
+      icon: Package, 
+      variant: "market" as const, 
+      trend: { value: 8, isPositive: true } 
+    },
+    { 
+      title: "Verified Vendors", 
+      value: String(stats.verifiedVendors), 
+      icon: Store, 
+      variant: "gold" as const 
+    },
+    { 
+      title: "Active Shoppers", 
+      value: String(stats.activeShoppers), 
+      icon: Briefcase, 
+      variant: "default" as const 
+    },
   ];
 
-  const pendingVerifications = [
-    { id: "v1", name: "Nana's Spice Shop", market: "Makola Market", type: "vendor", date: "2024-03-15" },
-    { id: "v2", name: "Kofi Asante", market: "Kaneshie Market", type: "shopper", date: "2024-03-15" },
-    { id: "v3", name: "Fresh Fish Plus", market: "Makola Market", type: "vendor", date: "2024-03-14" },
+  const sidebarItems = [
+    { icon: LayoutDashboard, label: "Dashboard", tab: "overview" },
+    { icon: Package, label: "Orders", tab: "orders", count: stats.activeOrders },
+    { icon: Store, label: "Vendors", tab: "vendors", count: pendingVendors.length },
+    { icon: Briefcase, label: "Shoppers", tab: "shoppers", count: pendingShoppers.length },
+    { icon: Users, label: "Consumers", tab: "consumers" },
+    { icon: MapPin, label: "Markets", tab: "markets" },
+    { icon: AlertTriangle, label: "Disputes", tab: "disputes", count: 0 },
+    { icon: DollarSign, label: "Settlements", tab: "settlements" },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,20 +173,15 @@ const AdminDashboard = () => {
         </div>
 
         <nav className="px-4 space-y-1">
-          {[
-            { icon: LayoutDashboard, label: "Dashboard", active: true },
-            { icon: Package, label: "Orders", count: 12 },
-            { icon: Store, label: "Vendors", count: 5 },
-            { icon: Briefcase, label: "Shoppers", count: 3 },
-            { icon: Users, label: "Consumers" },
-            { icon: MapPin, label: "Markets" },
-            { icon: AlertTriangle, label: "Disputes", count: 2 },
-            { icon: DollarSign, label: "Settlements" },
-          ].map((item, index) => (
+          {sidebarItems.map((item) => (
             <button
-              key={index}
+              key={item.label}
+              onClick={() => {
+                setActiveTab(item.tab);
+                setSidebarTab(item.label);
+              }}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
-                item.active
+                sidebarTab === item.label
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
               }`}
@@ -104,7 +190,7 @@ const AdminDashboard = () => {
                 <item.icon className="w-5 h-5" />
                 <span className="font-medium">{item.label}</span>
               </div>
-              {item.count && (
+              {item.count !== undefined && item.count > 0 && (
                 <Badge variant="default" className="text-xs">
                   {item.count}
                 </Badge>
@@ -113,7 +199,11 @@ const AdminDashboard = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="absolute bottom-4 left-4 right-4 space-y-2">
+          <Button variant="ghost" className="w-full justify-start gap-2" onClick={refetch}>
+            <RefreshCw className="w-4 h-4" />
+            Refresh Data
+          </Button>
           <Button variant="ghost" className="w-full justify-start gap-2" onClick={handleSignOut}>
             <LogOut className="w-4 h-4" />
             Sign Out
@@ -144,10 +234,11 @@ const AdminDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
-              <Button variant="outline" size="sm" className="hidden sm:flex">
-                <Filter className="w-4 h-4 mr-2" />
-                Filters
-              </Button>
+              {allPending.length > 0 && (
+                <Badge variant="pending" className="hidden sm:flex">
+                  {allPending.length} pending verifications
+                </Badge>
+              )}
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold">
                 A
               </div>
@@ -165,7 +256,9 @@ const AdminDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6 md:mb-8"
           >
-            <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">Admin Dashboard</h1>
+            <h1 className="font-display text-2xl md:text-3xl font-bold mb-2">
+              {sidebarTab === "Dashboard" ? "Admin Dashboard" : sidebarTab}
+            </h1>
             <p className="text-muted-foreground text-sm md:text-base">
               Welcome back! Here's what's happening across KwikMarket today.
             </p>
@@ -173,54 +266,60 @@ const AdminDashboard = () => {
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
-            {stats.map((stat, index) => (
+            {dashboardStats.map((stat, index) => (
               <StatsCard key={index} {...stat} index={index} />
             ))}
           </div>
 
-          {/* Main Tabs */}
-          <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
-            <TabsList className="w-full grid grid-cols-3">
-              <TabsTrigger value="overview" className="text-sm">Overview</TabsTrigger>
-              <TabsTrigger value="verifications" className="text-sm">Verifications</TabsTrigger>
-              <TabsTrigger value="disputes" className="text-sm">Disputes</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="space-y-4 md:space-y-6">
+          {/* Dynamic Content Based on Sidebar Selection */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
               <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-                {/* Activity Feed */}
+                {/* Pending Verifications */}
                 <Card className="border shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Recent Activity</CardTitle>
-                    <CardDescription>Latest actions across the platform</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Pending Verifications</CardTitle>
+                      <Badge variant="pending">{allPending.length}</Badge>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-3 md:space-y-4">
-                    {recentActivities.map((activity, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="flex items-start gap-3"
-                      >
-                        <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          activity.type === "vendor" ? "bg-market/20 text-market" :
-                          activity.type === "order" ? "bg-primary/20 text-primary" :
-                          activity.type === "dispute" ? "bg-destructive/20 text-destructive" :
-                          "bg-gold/20 text-gold"
-                        }`}>
-                          {activity.type === "vendor" && <Store className="w-4 h-4 md:w-5 md:h-5" />}
-                          {activity.type === "order" && <Package className="w-4 h-4 md:w-5 md:h-5" />}
-                          {activity.type === "dispute" && <AlertTriangle className="w-4 h-4 md:w-5 md:h-5" />}
-                          {activity.type === "shopper" && <Briefcase className="w-4 h-4 md:w-5 md:h-5" />}
+                  <CardContent className="space-y-3">
+                    {allPending.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No pending verifications
+                      </p>
+                    ) : (
+                      allPending.slice(0, 5).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              item.type === "vendor" ? "bg-market/20 text-market" : "bg-gold/20 text-gold"
+                            }`}>
+                              {item.type === "vendor" ? <Store className="w-5 h-5" /> : <Briefcase className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                {item.type === "vendor" ? (item as any).business_name : `Shopper #${item.id.slice(0, 8)}`}
+                              </p>
+                              <p className="text-xs text-muted-foreground capitalize">{item.type}</p>
+                            </div>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              if (item.type === "vendor") {
+                                verifyVendor(item.id);
+                              } else {
+                                verifyShopper(item.id);
+                              }
+                            }}
+                          >
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            Verify
+                          </Button>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm md:text-base">{activity.action}</p>
-                          <p className="text-xs md:text-sm text-muted-foreground truncate">{activity.user}</p>
-                        </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">{activity.time}</span>
-                      </motion.div>
-                    ))}
+                      ))
+                    )}
                   </CardContent>
                 </Card>
 
@@ -236,7 +335,7 @@ const AdminDashboard = () => {
                         <div className="flex items-center justify-between text-sm">
                           <span className="font-medium truncate">{market.name}</span>
                           <span className="text-muted-foreground flex-shrink-0">
-                            {200 + index * 50} orders
+                            {orders.filter((o) => o.market_id === market.id).length} orders
                           </span>
                         </div>
                         <Progress value={60 + index * 10} className="h-2" />
@@ -254,7 +353,11 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
                     <div className="text-center">
-                      <div className="text-2xl md:text-3xl font-display font-bold text-market">98.5%</div>
+                      <div className="text-2xl md:text-3xl font-display font-bold text-market">
+                        {orders.length > 0
+                          ? ((orders.filter((o) => o.status === "completed").length / orders.length) * 100).toFixed(1)
+                          : 0}%
+                      </div>
                       <p className="text-xs md:text-sm text-muted-foreground">Order Success</p>
                     </div>
                     <div className="text-center">
@@ -272,51 +375,52 @@ const AdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="verifications">
-              <Card className="border shadow-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-lg">Pending Verifications</CardTitle>
-                      <CardDescription>Review and approve new vendors and shoppers</CardDescription>
-                    </div>
-                    <Badge variant="pending">{pendingVerifications.length} pending</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto -mx-6 px-6">
+          {activeTab === "orders" && (
+            <div className="space-y-4">
+              <OrderFilters
+                searchQuery={orderSearchQuery}
+                selectedStatus={orderStatus}
+                dateRange={orderDateRange}
+                onSearchChange={setOrderSearchQuery}
+                onStatusChange={setOrderStatus}
+                onDateRangeChange={setOrderDateRange}
+              />
+              
+              <Card>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="hidden sm:table-cell">Market</TableHead>
-                          <TableHead className="hidden md:table-cell">Date</TableHead>
+                          <TableHead>Order #</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Date</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingVerifications.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
+                        {filteredOrders.slice(0, 20).map((order) => (
+                          <TableRow key={order.id}>
+                            <TableCell className="font-medium">{order.order_number}</TableCell>
                             <TableCell>
-                              <Badge variant={item.type === "vendor" ? "active" : "gold"}>
-                                {item.type}
+                              <Badge variant={
+                                order.status === "completed" ? "success" :
+                                order.status === "cancelled" ? "destructive" :
+                                "pending"
+                              }>
+                                {order.status}
                               </Badge>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">{item.market}</TableCell>
-                            <TableCell className="hidden md:table-cell">{item.date}</TableCell>
+                            <TableCell>₵{Number(order.total || 0).toFixed(2)}</TableCell>
+                            <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-1 md:gap-2">
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button variant="default" size="sm" className="h-8">
-                                  Approve
-                                </Button>
-                              </div>
+                              <Button variant="ghost" size="sm">
+                                <Eye className="w-4 h-4" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -325,52 +429,187 @@ const AdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="disputes">
-              <Card className="border shadow-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <CardTitle className="text-lg">Active Disputes</CardTitle>
-                      <CardDescription>Resolve customer and vendor issues</CardDescription>
-                    </div>
-                    <Badge variant="destructive">2 open</Badge>
+          {activeTab === "vendors" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Vendor Management</CardTitle>
+                <CardDescription>View and manage all vendors</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Business Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Verified</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Orders</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vendors.map((vendor) => (
+                        <TableRow key={vendor.id}>
+                          <TableCell className="font-medium">{vendor.business_name}</TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={vendor.is_active ?? true}
+                              onCheckedChange={(checked) => toggleVendorActive(vendor.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {vendor.is_verified ? (
+                              <Badge variant="success">Verified</Badge>
+                            ) : (
+                              <Badge variant="pending">Pending</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{vendor.rating || "N/A"}</TableCell>
+                          <TableCell>{vendor.total_orders || 0}</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                {!vendor.is_verified && (
+                                  <DropdownMenuItem onClick={() => verifyVendor(vendor.id)}>
+                                    <UserCheck className="w-4 h-4 mr-2" />
+                                    Verify
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className="text-destructive">
+                                  <Ban className="w-4 h-4 mr-2" />
+                                  Suspend
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "shoppers" && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Shopper Management</CardTitle>
+                <CardDescription>View and manage all shoppers</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Shopper ID</TableHead>
+                        <TableHead>Available</TableHead>
+                        <TableHead>Verified</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Deliveries</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {shoppers.map((shopper) => (
+                        <TableRow key={shopper.id}>
+                          <TableCell className="font-medium font-mono">
+                            {shopper.id.slice(0, 8)}...
+                          </TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={shopper.is_available ?? true}
+                              onCheckedChange={(checked) => toggleShopperAvailable(shopper.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {shopper.is_verified ? (
+                              <Badge variant="success">Verified</Badge>
+                            ) : (
+                              <Badge variant="pending">Pending</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{shopper.rating || "N/A"}</TableCell>
+                          <TableCell>{shopper.total_deliveries || 0}</TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                                {!shopper.is_verified && (
+                                  <DropdownMenuItem onClick={() => verifyShopper(shopper.id)}>
+                                    <UserCheck className="w-4 h-4 mr-2" />
+                                    Verify
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className="text-destructive">
+                                  <Ban className="w-4 h-4 mr-2" />
+                                  Suspend
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeTab === "disputes" && (
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-lg">Active Disputes</CardTitle>
+                    <CardDescription>Resolve customer and vendor issues</CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { id: "D-001", order: "ORD-12389", type: "Quality Issue", status: "investigating", customer: "Ama K.", vendor: "Fresh Fish Corner" },
-                    { id: "D-002", order: "ORD-12345", type: "Missing Item", status: "pending", customer: "Kofi A.", vendor: "Auntie Akua's" },
-                  ].map((dispute) => (
-                    <Card key={dispute.id} className="border">
-                      <CardContent className="p-4">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <AlertTriangle className="w-4 h-4 text-destructive" />
-                              <span className="font-semibold">{dispute.id}</span>
-                              <Badge variant="pending">{dispute.status}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mb-1">
-                              Order: {dispute.order} • {dispute.type}
-                            </p>
-                            <p className="text-sm">
-                              {dispute.customer} → {dispute.vendor}
-                            </p>
-                          </div>
-                          <div className="flex gap-2 self-end sm:self-start">
-                            <Button variant="outline" size="sm">View</Button>
-                            <Button variant="default" size="sm">Resolve</Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  <Badge variant="destructive">0 open</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <CheckCircle2 className="w-16 h-16 text-market/50 mx-auto mb-4" />
+                  <h3 className="font-display text-xl font-bold mb-2">No Active Disputes</h3>
+                  <p className="text-muted-foreground">All clear! No disputes require attention.</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {(activeTab === "consumers" || activeTab === "markets" || activeTab === "settlements") && (
+            <Card className="border shadow-sm">
+              <CardContent className="p-12 text-center">
+                <Clock className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="font-display text-xl font-bold mb-2">Coming Soon</h3>
+                <p className="text-muted-foreground">
+                  This section is under development and will be available soon.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </main>
     </div>
