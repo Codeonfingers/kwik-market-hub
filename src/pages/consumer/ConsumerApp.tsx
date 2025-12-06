@@ -11,17 +11,24 @@ import {
   Package,
   LogOut,
   Loader2,
-  CreditCard
+  CreditCard,
+  Navigation,
+  Truck
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ProductCard from "@/components/shared/ProductCard";
 import CategoryPill from "@/components/shared/CategoryPill";
 import OrderStatusBadge from "@/components/shared/OrderStatusBadge";
 import MomoPaymentModal from "@/components/shared/MomoPaymentModal";
+import OrderTrackingMap from "@/components/tracking/OrderTrackingMap";
+import WhatsAppOrderButton from "@/components/ordering/WhatsAppOrderButton";
+import VoiceOrderInput from "@/components/ordering/VoiceOrderInput";
+import CourierIntegration from "@/components/delivery/CourierIntegration";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/hooks/useOrders";
 import { useProducts } from "@/hooks/useProducts";
@@ -54,6 +61,14 @@ const ConsumerApp = () => {
     open: false,
     orderId: "",
     amount: 0,
+  });
+  const [trackingOrder, setTrackingOrder] = useState<{ open: boolean; order: any | null }>({
+    open: false,
+    order: null,
+  });
+  const [courierModal, setCourierModal] = useState<{ open: boolean; orderId: string }>({
+    open: false,
+    orderId: "",
   });
 
   // Real-time order status notifications
@@ -309,31 +324,47 @@ const ConsumerApp = () => {
                           </p>
                         )}
                       </div>
-                      <div className="mt-4 pt-4 border-t flex items-center justify-between">
+                      <div className="mt-4 pt-4 border-t flex items-center justify-between gap-2">
                         <div>
                           <p className="text-sm text-muted-foreground">Total</p>
                           <p className="font-display text-xl font-bold">₵{Number(order.total).toFixed(2)}</p>
                         </div>
-                        {order.status === "inspecting" && (
-                          <Button
-                            variant="hero"
-                            size="sm"
-                            onClick={() => setPaymentModal({
-                              open: true,
-                              orderId: order.id,
-                              amount: Number(order.total),
-                            })}
-                          >
-                            <CreditCard className="w-4 h-4" />
-                            Pay Now
-                          </Button>
-                        )}
-                        {order.status !== "inspecting" && (
-                          <Button variant="outline" size="sm">
-                            Track Order
-                            <ChevronRight className="w-4 h-4" />
-                          </Button>
-                        )}
+                        <div className="flex gap-2">
+                          {order.status === "inspecting" && (
+                            <Button
+                              variant="hero"
+                              size="sm"
+                              onClick={() => setPaymentModal({
+                                open: true,
+                                orderId: order.id,
+                                amount: Number(order.total),
+                              })}
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              Pay Now
+                            </Button>
+                          )}
+                          {(order.status === "picked_up" || order.status === "preparing" || order.status === "ready") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setTrackingOrder({ open: true, order })}
+                            >
+                              <Navigation className="w-4 h-4" />
+                              Track
+                            </Button>
+                          )}
+                          {order.status === "pending" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setCourierModal({ open: true, orderId: order.id })}
+                            >
+                              <Truck className="w-4 h-4" />
+                              Delivery
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -366,6 +397,43 @@ const ConsumerApp = () => {
         orderId={paymentModal.orderId}
         amount={paymentModal.amount}
         onSuccess={() => {}}
+      />
+
+      {/* GPS Tracking Modal */}
+      <Dialog open={trackingOrder.open} onOpenChange={(open) => setTrackingOrder({ open, order: open ? trackingOrder.order : null })}>
+        <DialogContent className="max-w-lg p-0">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle>Track Your Order</DialogTitle>
+          </DialogHeader>
+          {trackingOrder.order && (
+            <OrderTrackingMap
+              orderStatus={trackingOrder.order.status}
+              shopperName="Your Shopper"
+              estimatedTime="15-20 mins"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Courier Selection Modal */}
+      <Dialog open={courierModal.open} onOpenChange={(open) => setCourierModal({ open, orderId: open ? courierModal.orderId : "" })}>
+        <DialogContent className="max-w-lg p-0">
+          <CourierIntegration
+            orderId={courierModal.orderId}
+            pickupAddress={selectedMarket?.name || "Market"}
+            onCourierSelected={(courier) => {
+              setCourierModal({ open: false, orderId: "" });
+              toast.success(`${courier.name} delivery booked!`);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp Floating Button */}
+      <WhatsAppOrderButton
+        variant="floating"
+        marketName={selectedMarket?.name}
+        items={cart.map(item => ({ name: item.productName, quantity: item.quantity, unit: item.unit }))}
       />
     </div>
   );

@@ -15,7 +15,8 @@ import {
   TrendingUp,
   CircleDollarSign,
   LogOut,
-  Loader2
+  Loader2,
+  Map
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +26,9 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import StatsCard from "@/components/shared/StatsCard";
+import OrderTrackingMap from "@/components/tracking/OrderTrackingMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShopperJobs, JobWithOrder } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
@@ -43,6 +46,7 @@ const ShopperApp = () => {
   const [currentJob, setCurrentJob] = useState<JobWithOrder | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   // Real-time job notifications
   useRealtimeJobNotifications(shopper?.id);
@@ -236,12 +240,22 @@ const ShopperApp = () => {
                   </div>
                 </div>
 
-                <Button 
-                  className="w-full mt-6 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
-                  onClick={handleCompleteJob}
-                >
-                  Mark as Completed
-                </Button>
+                <div className="flex gap-3 mt-6">
+                  <Button 
+                    variant="outline"
+                    className="flex-1 bg-primary-foreground/20 border-primary-foreground/50 text-primary-foreground hover:bg-primary-foreground/30"
+                    onClick={() => setShowMap(true)}
+                  >
+                    <Map className="w-4 h-4 mr-2" />
+                    View Map
+                  </Button>
+                  <Button 
+                    className="flex-1 bg-primary-foreground text-primary hover:bg-primary-foreground/90"
+                    onClick={handleCompleteJob}
+                  >
+                    Mark as Completed
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -400,6 +414,20 @@ const ShopperApp = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* GPS Map Modal */}
+      <Dialog open={showMap} onOpenChange={setShowMap}>
+        <DialogContent className="max-w-lg p-0">
+          <DialogHeader className="p-4 pb-0">
+            <DialogTitle>Delivery Route</DialogTitle>
+          </DialogHeader>
+          <OrderTrackingMap
+            orderStatus={currentJob?.status || "picked_up"}
+            shopperName="You"
+            estimatedTime="10-15 mins"
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
