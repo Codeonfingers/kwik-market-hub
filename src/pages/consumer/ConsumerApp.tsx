@@ -13,7 +13,9 @@ import {
   Loader2,
   CreditCard,
   Navigation,
-  Truck
+  Truck,
+  Star,
+  Bell
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,11 +31,15 @@ import OrderTrackingMap from "@/components/tracking/OrderTrackingMap";
 import WhatsAppOrderButton from "@/components/ordering/WhatsAppOrderButton";
 import VoiceOrderInput from "@/components/ordering/VoiceOrderInput";
 import CourierIntegration from "@/components/delivery/CourierIntegration";
+import RatingModal from "@/components/shared/RatingModal";
+import OrderExportMenu from "@/components/shared/OrderExportMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/hooks/useOrders";
 import { useProducts } from "@/hooks/useProducts";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useRealtimeConsumerNotifications } from "@/hooks/useRealtimeNotifications";
+import { useRatings } from "@/hooks/useRatings";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { OrderStatus } from "@/types";
@@ -70,8 +76,24 @@ const ConsumerApp = () => {
     open: false,
     orderId: "",
   });
+  const [ratingModal, setRatingModal] = useState<{
+    open: boolean;
+    orderId: string;
+    targetUserId: string;
+    targetName: string;
+    targetType: "vendor" | "shopper";
+  }>({
+    open: false,
+    orderId: "",
+    targetUserId: "",
+    targetName: "",
+    targetType: "vendor",
+  });
 
-  // Real-time order status notifications
+  const { hasRatedOrder } = useRatings();
+  const { permission, requestPermission, isSupported, notifyOrderStatus } = usePushNotifications();
+
+  // Real-time order status notifications with push
   useRealtimeConsumerNotifications(user?.id);
 
   // Auth is handled by ProtectedRoute wrapper
@@ -171,6 +193,11 @@ const ConsumerApp = () => {
             </div>
 
             <div className="flex items-center gap-2">
+              {isSupported && permission !== "granted" && (
+                <Button variant="ghost" size="icon" onClick={requestPermission}>
+                  <Bell className="w-5 h-5" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="w-5 h-5" />
                 {cart.length > 0 && (
@@ -279,7 +306,10 @@ const ConsumerApp = () => {
           </TabsContent>
 
           <TabsContent value="orders" className="space-y-4">
-            <h2 className="font-display text-xl font-bold mb-4">Your Orders</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-display text-xl font-bold">Your Orders</h2>
+              <OrderExportMenu orders={orders} />
+            </div>
             
             {ordersLoading ? (
               <div className="flex justify-center py-12">
@@ -364,6 +394,22 @@ const ConsumerApp = () => {
                               Delivery
                             </Button>
                           )}
+                          {order.status === "completed" && order.vendor_id && !hasRatedOrder(order.id, order.vendor_id) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setRatingModal({
+                                open: true,
+                                orderId: order.id,
+                                targetUserId: order.vendor_id!,
+                                targetName: "Vendor",
+                                targetType: "vendor",
+                              })}
+                            >
+                              <Star className="w-4 h-4" />
+                              Rate
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -428,6 +474,16 @@ const ConsumerApp = () => {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Rating Modal */}
+      <RatingModal
+        open={ratingModal.open}
+        onClose={() => setRatingModal({ ...ratingModal, open: false })}
+        orderId={ratingModal.orderId}
+        targetUserId={ratingModal.targetUserId}
+        targetName={ratingModal.targetName}
+        targetType={ratingModal.targetType}
+      />
 
       {/* WhatsApp Floating Button */}
       <WhatsAppOrderButton

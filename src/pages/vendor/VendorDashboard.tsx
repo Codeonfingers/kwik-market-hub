@@ -38,6 +38,7 @@ import { useOrders } from "@/hooks/useOrders";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link } from "react-router-dom";
 import { OrderStatus } from "@/types";
 import { toast } from "sonner";
@@ -70,8 +71,9 @@ const VendorDashboard = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadImage, uploading } = useImageUpload();
+  const { permission, requestPermission, isSupported, notifyNewOrder } = usePushNotifications();
 
-  // Real-time order notifications
+  // Real-time order notifications with push
   useRealtimeOrderNotifications(vendor?.id);
 
   // Vendor onboarding check (role is already verified by ProtectedRoute)
@@ -265,6 +267,11 @@ const VendorDashboard = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {isSupported && permission !== "granted" && (
+                <Button variant="ghost" size="icon" onClick={requestPermission} title="Enable notifications">
+                  <Bell className="w-5 h-5" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
                 {pendingOrders.length > 0 && (
