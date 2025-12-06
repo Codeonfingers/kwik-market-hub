@@ -9,25 +9,23 @@ import {
   Users, 
   MapPin, 
   Shield,
-  ChevronRight,
-  LogIn,
-  UserPlus
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import UserMenu from "./UserMenu";
 
 const navLinks = [
   { href: "/", label: "Home", icon: null },
   { href: "/markets", label: "Markets", icon: MapPin },
-  { href: "/consumer", label: "Start Order", icon: ShoppingBasket },
-  { href: "/vendor", label: "Vendors", icon: Store },
-  { href: "/shopper", label: "Shoppers", icon: Users },
-  { href: "/admin", label: "Admin", icon: Shield },
+  { href: "/how-it-works", label: "How It Works", icon: null },
 ];
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
@@ -64,30 +62,21 @@ const Header = () => {
 
           {/* Desktop Actions */}
           <div className="hidden lg:flex items-center gap-2">
-            <Link to="/auth">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <LogIn className="w-4 h-4" />
-                Login
-              </Button>
-            </Link>
-            <Link to="/auth">
-              <Button variant="default" size="sm" className="gap-2">
-                <UserPlus className="w-4 h-4" />
-                Register
-              </Button>
-            </Link>
+            <UserMenu />
           </div>
 
           {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={() => setIsOpen(!isOpen)}
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </Button>
+          <div className="flex items-center gap-2 lg:hidden">
+            <UserMenu compact />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsOpen(!isOpen)}
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -121,20 +110,34 @@ const Header = () => {
                 </Link>
               ))}
               
-              <div className="pt-4 mt-2 border-t border-border flex flex-col gap-2">
-                <Link to="/auth" onClick={() => setIsOpen(false)}>
-                  <Button variant="outline" className="w-full justify-center gap-2 h-12 text-base">
-                    <LogIn className="w-5 h-5" />
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/auth" onClick={() => setIsOpen(false)}>
-                  <Button variant="default" className="w-full justify-center gap-2 h-12 text-base">
-                    <UserPlus className="w-5 h-5" />
-                    Register
-                  </Button>
-                </Link>
-              </div>
+              {/* Quick Role Links for authenticated users */}
+              {user && (
+                <div className="pt-4 mt-2 border-t border-border">
+                  <p className="px-4 text-xs text-muted-foreground mb-2">Quick Access</p>
+                  <Link
+                    to="/consumer"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-between py-3 px-4 rounded-xl text-base font-medium hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-3">
+                      <ShoppingBasket className="w-5 h-5 text-primary" />
+                      Start Shopping
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </Link>
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center justify-between py-3 px-4 rounded-xl text-base font-medium hover:bg-muted"
+                  >
+                    <span className="flex items-center gap-3">
+                      <Users className="w-5 h-5 text-secondary" />
+                      Profile Settings
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </Link>
+                </div>
+              )}
             </nav>
           </motion.div>
         )}

@@ -37,9 +37,11 @@ import { useProducts } from "@/hooks/useProducts";
 import { useOrders } from "@/hooks/useOrders";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
+import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
 import { Link } from "react-router-dom";
 import { OrderStatus } from "@/types";
 import { toast } from "sonner";
+import UserMenu from "@/components/layout/UserMenu";
 
 const VendorDashboard = () => {
   const navigate = useNavigate();
@@ -68,6 +70,9 @@ const VendorDashboard = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadImage, uploading } = useImageUpload();
+
+  // Real-time order notifications
+  useRealtimeOrderNotifications(vendor?.id);
 
   // Vendor onboarding check (role is already verified by ProtectedRoute)
 

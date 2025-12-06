@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrders } from "@/hooks/useOrders";
 import { useProducts } from "@/hooks/useProducts";
 import { useMarkets } from "@/hooks/useMarkets";
+import { useRealtimeConsumerNotifications } from "@/hooks/useRealtimeNotifications";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { OrderStatus } from "@/types";
@@ -54,6 +55,9 @@ const ConsumerApp = () => {
     orderId: "",
     amount: 0,
   });
+
+  // Real-time order status notifications
+  useRealtimeConsumerNotifications(user?.id);
 
   // Auth is handled by ProtectedRoute wrapper
 
