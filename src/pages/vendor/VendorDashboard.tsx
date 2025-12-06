@@ -69,11 +69,8 @@ const VendorDashboard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { uploadImage, uploading } = useImageUpload();
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-    }
-  }, [user, authLoading, navigate]);
+  // Vendor onboarding check (role is already verified by ProtectedRoute)
+
 
   useEffect(() => {
     if (!vendorLoading && !vendor && user) {
