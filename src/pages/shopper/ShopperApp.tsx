@@ -16,7 +16,8 @@ import {
   CircleDollarSign,
   LogOut,
   Loader2,
-  Map
+  Map,
+  Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useShopperJobs, JobWithOrder } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -47,8 +49,10 @@ const ShopperApp = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState("");
   const [showMap, setShowMap] = useState(false);
+  
+  const { permission, requestPermission, isSupported, notifyNewJob } = usePushNotifications();
 
-  // Real-time job notifications
+  // Real-time job notifications with push
   useRealtimeJobNotifications(shopper?.id);
 
   // Auth is handled by ProtectedRoute wrapper
@@ -176,6 +180,11 @@ const ShopperApp = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {isSupported && permission !== "granted" && (
+                <Button variant="ghost" size="icon" onClick={requestPermission} title="Enable notifications">
+                  <Bell className="w-5 h-5" />
+                </Button>
+              )}
               <span className={`text-sm font-medium ${isAvailable ? "text-market" : "text-muted-foreground"}`}>
                 {isAvailable ? "Available" : "Offline"}
               </span>
