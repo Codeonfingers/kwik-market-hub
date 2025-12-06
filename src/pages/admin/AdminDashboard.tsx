@@ -36,32 +36,11 @@ import { toast } from "sonner";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, loading: authLoading, hasRole, signOut } = useAuth();
+  const { signOut } = useAuth();
   const { markets } = useMarkets();
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
-  useEffect(() => {
-    const checkAccess = async () => {
-      if (!authLoading && !user) {
-        toast.error("Please login to access the admin dashboard");
-        navigate("/auth");
-        return;
-      }
-
-      if (!authLoading && user) {
-        const adminCheck = await hasRole("admin");
-        setIsAdmin(adminCheck);
-        
-        if (!adminCheck) {
-          toast.error("Unauthorized: Admin access required");
-          navigate("/");
-        }
-      }
-    };
-
-    checkAccess();
-  }, [user, authLoading, hasRole, navigate]);
+  // Auth and role check is handled by ProtectedRoute wrapper
 
   const handleSignOut = async () => {
     await signOut();
@@ -88,22 +67,6 @@ const AdminDashboard = () => {
     { id: "v3", name: "Fresh Fish Plus", market: "Makola Market", type: "vendor", date: "2024-03-14" },
   ];
 
-  // Loading state
-  if (authLoading || isAdmin === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Verifying admin access...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Unauthorized state (shouldn't show but extra safety)
-  if (!isAdmin) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-background">

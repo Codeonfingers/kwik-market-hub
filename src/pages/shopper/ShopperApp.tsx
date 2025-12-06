@@ -43,11 +43,8 @@ const ShopperApp = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState("");
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-    }
-  }, [user, authLoading, navigate]);
+  // Auth is handled by ProtectedRoute wrapper
+
 
   useEffect(() => {
     if (!loading && !shopper && user) {

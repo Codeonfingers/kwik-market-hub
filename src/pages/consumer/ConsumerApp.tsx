@@ -55,11 +55,8 @@ const ConsumerApp = () => {
     amount: 0,
   });
 
-  useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth");
-    }
-  }, [user, authLoading, navigate]);
+  // Auth is handled by ProtectedRoute wrapper
+
 
   useEffect(() => {
     if (markets.length > 0 && !selectedMarketId) {

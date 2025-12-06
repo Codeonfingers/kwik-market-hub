@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { Package, Mail, Lock, User, Loader2 } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Package, Mail, Lock, User, Loader2, Store, Briefcase, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,20 +15,66 @@ const emailSchema = z.string().email("Please enter a valid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 const nameSchema = z.string().min(2, "Name must be at least 2 characters");
 
+type SignupRole = "consumer" | "vendor" | "shopper";
+
+const roleInfo: Record<SignupRole, { icon: typeof Package; label: string; description: string; color: string }> = {
+  consumer: {
+    icon: ShoppingBag,
+    label: "Customer",
+    description: "Order products from local markets",
+    color: "gradient-primary",
+  },
+  vendor: {
+    icon: Store,
+    label: "Vendor",
+    description: "Sell your products at markets",
+    color: "gradient-market",
+  },
+  shopper: {
+    icon: Briefcase,
+    label: "Shopper",
+    description: "Earn by delivering orders",
+    color: "gradient-gold",
+  },
+};
+
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, loading } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, roles, signIn, signUp, loading, hasRole, addRole } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [signInForm, setSignInForm] = useState({ email: "", password: "" });
   const [signUpForm, setSignUpForm] = useState({ email: "", password: "", fullName: "" });
+  const [selectedRole, setSelectedRole] = useState<SignupRole>("consumer");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Get intended role from URL params (e.g., /auth?role=vendor)
   useEffect(() => {
-    if (user && !loading) {
+    const roleParam = searchParams.get("role") as SignupRole | null;
+    if (roleParam && ["consumer", "vendor", "shopper"].includes(roleParam)) {
+      setSelectedRole(roleParam);
+    }
+  }, [searchParams]);
+
+  // Redirect authenticated users based on their roles
+  useEffect(() => {
+    if (user && !loading && roles.length > 0) {
+      redirectBasedOnRole();
+    }
+  }, [user, loading, roles]);
+
+  const redirectBasedOnRole = () => {
+    if (hasRole("admin")) {
+      navigate("/admin");
+    } else if (hasRole("vendor")) {
+      navigate("/vendor");
+    } else if (hasRole("shopper")) {
+      navigate("/shopper");
+    } else {
       navigate("/consumer");
     }
-  }, [user, loading, navigate]);
+  };
 
   const validateSignIn = () => {
     const newErrors: Record<string, string> = {};
@@ -88,7 +134,7 @@ const Auth = () => {
         : error.message);
     } else {
       toast.success("Welcome back!");
-      navigate("/consumer");
+      // Redirect will happen via useEffect
     }
   };
 
@@ -98,18 +144,28 @@ const Auth = () => {
     
     setIsSubmitting(true);
     const { error } = await signUp(signUpForm.email, signUpForm.password, signUpForm.fullName);
-    setIsSubmitting(false);
     
     if (error) {
+      setIsSubmitting(false);
       if (error.message.includes("already registered")) {
         toast.error("This email is already registered. Please sign in instead.");
       } else {
         toast.error(error.message);
       }
-    } else {
-      toast.success("Account created successfully! Welcome to KwikMarket.");
-      navigate("/consumer");
+      return;
     }
+
+    // Add the selected role if not consumer (consumer is default)
+    if (selectedRole !== "consumer") {
+      const { error: roleError } = await addRole(selectedRole);
+      if (roleError) {
+        console.error("Failed to add role:", roleError);
+      }
+    }
+
+    setIsSubmitting(false);
+    toast.success("Account created successfully! Welcome to KwikMarket.");
+    // Redirect will happen via useEffect
   };
 
   if (loading) {
@@ -193,6 +249,42 @@ const Auth = () => {
 
               <TabsContent value="signup">
                 <form onSubmit={handleSignUp} className="space-y-4">
+                  {/* Role Selection */}
+                  <div className="space-y-3">
+                    <Label>I want to join as</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(Object.keys(roleInfo) as SignupRole[]).map((role) => {
+                        const info = roleInfo[role];
+                        const Icon = info.icon;
+                        const isSelected = selectedRole === role;
+                        
+                        return (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => setSelectedRole(role)}
+                            className={`
+                              relative p-3 rounded-xl border-2 transition-all duration-200
+                              flex flex-col items-center gap-1.5 text-center
+                              ${isSelected 
+                                ? "border-primary bg-primary/5 shadow-sm" 
+                                : "border-muted hover:border-muted-foreground/30"
+                              }
+                            `}
+                          >
+                            <div className={`w-10 h-10 rounded-lg ${info.color} flex items-center justify-center`}>
+                              <Icon className="w-5 h-5 text-primary-foreground" />
+                            </div>
+                            <span className="text-xs font-medium">{info.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {roleInfo[selectedRole].description}
+                    </p>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="fullname">Full Name</Label>
                     <div className="relative">
@@ -248,7 +340,7 @@ const Auth = () => {
                   </div>
 
                   <Button type="submit" variant="hero" className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Create ${roleInfo[selectedRole].label} Account`}
                   </Button>
                 </form>
               </TabsContent>
