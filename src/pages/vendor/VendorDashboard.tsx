@@ -39,6 +39,8 @@ import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import StockManagement from "@/components/vendor/StockManagement";
+import OrderFilters from "@/components/shared/OrderFilters";
 import { Link } from "react-router-dom";
 import { OrderStatus } from "@/types";
 import { toast } from "sonner";
@@ -48,7 +50,7 @@ const VendorDashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading, signOut } = useAuth();
   const { vendor, loading: vendorLoading, createVendor } = useVendor();
-  const { products, loading: productsLoading, createProduct } = useProducts(vendor?.id);
+  const { products, loading: productsLoading, createProduct, updateProduct } = useProducts(vendor?.id);
   const { orders, updateOrderStatus } = useOrders();
   const { markets } = useMarkets();
   
@@ -324,9 +326,10 @@ const VendorDashboard = () => {
 
         {/* Main Content */}
         <Tabs defaultValue="orders" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="orders" className="text-base">Orders</TabsTrigger>
             <TabsTrigger value="products" className="text-base">Products</TabsTrigger>
+            <TabsTrigger value="stock" className="text-base">Stock</TabsTrigger>
             <TabsTrigger value="analytics" className="text-base">Analytics</TabsTrigger>
           </TabsList>
 
@@ -603,6 +606,25 @@ const VendorDashboard = () => {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="stock">
+            <StockManagement
+              products={products.map((p) => ({
+                id: p.id,
+                name: p.name,
+                price: Number(p.price),
+                stock_quantity: p.stock_quantity,
+                is_available: p.is_available,
+                image_url: p.image_url,
+              }))}
+              onUpdateStock={async (productId, quantity) => {
+                await updateProduct(productId, { stock_quantity: quantity });
+              }}
+              onToggleAvailability={async (productId, available) => {
+                await updateProduct(productId, { is_available: available });
+              }}
+            />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">

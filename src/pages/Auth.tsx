@@ -74,20 +74,25 @@ const Auth = () => {
 
   // Redirect authenticated users based on their roles
   useEffect(() => {
-    if (user && !loading && roles.length > 0) {
-      redirectBasedOnRole();
+    if (user && !loading && roles.length > 0 && !isSubmitting) {
+      // Small delay to ensure roles are synced
+      const timer = setTimeout(() => {
+        redirectBasedOnRole();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [user, loading, roles]);
+  }, [user, loading, roles, isSubmitting]);
 
   const redirectBasedOnRole = () => {
+    // Prioritize the selected role during signup, otherwise use hierarchy
     if (hasRole("admin")) {
-      navigate("/admin");
+      navigate("/admin", { replace: true });
     } else if (hasRole("vendor")) {
-      navigate("/vendor");
+      navigate("/vendor", { replace: true });
     } else if (hasRole("shopper")) {
-      navigate("/shopper");
+      navigate("/shopper", { replace: true });
     } else {
-      navigate("/consumer");
+      navigate("/consumer", { replace: true });
     }
   };
 
