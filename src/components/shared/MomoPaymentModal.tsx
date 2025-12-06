@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Phone, Loader2, CheckCircle2 } from "lucide-react";
+import { Phone, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,18 @@ interface MomoPaymentModalProps {
   onSuccess: () => void;
 }
 
+// Ghanaian phone number prefixes by network
+const networkPrefixes: Record<"mtn" | "vodafone" | "airteltigo", string[]> = {
+  mtn: ["024", "025", "053", "054", "055", "059"],
+  vodafone: ["020", "050"],
+  airteltigo: ["026", "027", "056", "057"],
+};
+
+// Zod schema for Ghanaian phone validation
+const ghanaPhoneSchema = z.string()
+  .length(10, "Phone number must be exactly 10 digits")
+  .regex(/^0[2-5][0-9]{8}$/, "Invalid Ghanaian phone number format");
+
 const MomoPaymentModal = ({
   open,
   onClose,
@@ -40,8 +53,32 @@ const MomoPaymentModal = ({
   const [network, setNetwork] = useState<"mtn" | "vodafone" | "airteltigo">("mtn");
   const [success, setSuccess] = useState(false);
 
+  // Validate phone number and network match
+  const phoneValidation = useMemo(() => {
+    if (!phone) return { isValid: false, error: null };
+    
+    // Basic format validation
+    const formatResult = ghanaPhoneSchema.safeParse(phone);
+    if (!formatResult.success) {
+      return { isValid: false, error: formatResult.error.errors[0].message };
+    }
+    
+    // Network prefix validation
+    const prefix = phone.substring(0, 3);
+    const validPrefixes = networkPrefixes[network];
+    if (!validPrefixes.includes(prefix)) {
+      const networkName = network === "mtn" ? "MTN" : network === "vodafone" ? "Vodafone" : "AirtelTigo";
+      return { 
+        isValid: false, 
+        error: `This number doesn't match ${networkName}. Valid prefixes: ${validPrefixes.join(", ")}` 
+      };
+    }
+    
+    return { isValid: true, error: null };
+  }, [phone, network]);
+
   const handlePayment = async () => {
-    if (!phone || phone.length < 10) return;
+    if (!phoneValidation.isValid) return;
 
     const { error } = await initiatePayment(orderId, amount, phone, network);
     
@@ -123,9 +160,15 @@ const MomoPaymentModal = ({
                   placeholder="0244123456"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  className="pl-10"
+                  className={`pl-10 ${phoneValidation.error ? "border-destructive focus-visible:ring-destructive" : ""}`}
                 />
               </div>
+              {phoneValidation.error && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive">
+                  <AlertCircle className="w-3 h-3" />
+                  {phoneValidation.error}
+                </div>
+              )}
             </div>
 
             <div className="bg-muted rounded-lg p-4">
@@ -149,7 +192,7 @@ const MomoPaymentModal = ({
               variant="hero"
               className="w-full"
               onClick={handlePayment}
-              disabled={processing || phone.length < 10}
+              disabled={processing || !phoneValidation.isValid}
             >
               {processing ? (
                 <>
