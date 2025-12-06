@@ -29,6 +29,7 @@ import StatsCard from "@/components/shared/StatsCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShopperJobs, JobWithOrder } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
+import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -42,6 +43,9 @@ const ShopperApp = () => {
   const [currentJob, setCurrentJob] = useState<JobWithOrder | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState("");
+
+  // Real-time job notifications
+  useRealtimeJobNotifications(shopper?.id);
 
   // Auth is handled by ProtectedRoute wrapper
 

@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import Markets from "./pages/Markets";
 import HowItWorks from "./pages/HowItWorks";
 import Auth from "./pages/Auth";
+import ProfileSettings from "./pages/ProfileSettings";
 import ConsumerApp from "./pages/consumer/ConsumerApp";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import ShopperApp from "./pages/shopper/ShopperApp";
@@ -35,6 +36,9 @@ const App = () => (
             
             {/* Smart redirect for authenticated users */}
             <Route path="/dashboard" element={<RoleRedirect />} />
+            
+            {/* Profile settings - any authenticated user */}
+            <Route path="/profile" element={<ProfileSettings />} />
             
             {/* Consumer routes - default role, any authenticated user can access */}
             <Route path="/consumer" element={
