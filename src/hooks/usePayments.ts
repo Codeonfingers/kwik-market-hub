@@ -2,10 +2,6 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Database } from "@/integrations/supabase/types";
-
-type Payment = Database["public"]["Tables"]["payments"]["Row"];
-type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
 export const usePayments = () => {
   const { user } = useAuth();
@@ -20,58 +16,42 @@ export const usePayments = () => {
     if (!user) return { error: new Error("Not authenticated") };
 
     setProcessing(true);
-
-    // Create payment record
-    const { data: payment, error } = await supabase
-      .from("payments")
-      .insert({
-        order_id: orderId,
-        user_id: user.id,
-        amount,
-        payment_method: "momo",
-        momo_phone: momoPhone,
-        momo_network: momoNetwork,
-        status: "pending",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      setProcessing(false);
-      toast.error("Failed to initiate payment");
-      return { error };
-    }
-
-    // Simulate MoMo payment processing (in real implementation, this would call MoMo API)
     toast.info("Processing Mobile Money payment...");
 
-    // Simulate a delay and successful payment
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
 
-    // Update payment status to completed (simulated)
-    const { error: updateError } = await supabase
-      .from("payments")
-      .update({
-        status: "completed",
-        transaction_id: `MOMO-${Date.now()}`,
-      })
-      .eq("id", payment.id);
+      if (!token) {
+        setProcessing(false);
+        toast.error("Session expired. Please log in again.");
+        return { error: new Error("No session token") };
+      }
 
-    if (updateError) {
+      const response = await supabase.functions.invoke("process-payment", {
+        body: { orderId, amount, momoPhone, momoNetwork },
+      });
+
+      if (response.error) {
+        setProcessing(false);
+        toast.error(response.error.message || "Payment failed");
+        return { error: response.error };
+      }
+
+      if (!response.data?.success) {
+        setProcessing(false);
+        toast.error(response.data?.error || "Payment processing failed");
+        return { error: new Error(response.data?.error || "Payment failed") };
+      }
+
       setProcessing(false);
-      toast.error("Payment processing failed");
-      return { error: updateError };
+      toast.success("Payment successful!");
+      return { data: response.data.payment, error: null };
+    } catch (error) {
+      setProcessing(false);
+      toast.error("An error occurred during payment");
+      return { error: error instanceof Error ? error : new Error("Unknown error") };
     }
-
-    // Update order status
-    await supabase
-      .from("orders")
-      .update({ status: "completed" })
-      .eq("id", orderId);
-
-    setProcessing(false);
-    toast.success("Payment successful!");
-    return { data: payment, error: null };
   };
 
   const getPaymentsByOrder = async (orderId: string) => {

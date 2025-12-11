@@ -8,16 +8,49 @@ type ShopperJob = Database["public"]["Tables"]["shopper_jobs"]["Row"];
 type Shopper = Database["public"]["Tables"]["shoppers"]["Row"];
 type Order = Database["public"]["Tables"]["orders"]["Row"];
 
-export interface JobWithOrder extends ShopperJob {
+// Filtered job type that hides commission from non-assigned shoppers
+export interface SafeJobWithOrder {
+  id: string;
+  order_id: string;
+  status: string;
+  created_at: string;
+  accepted_at: string | null;
+  picked_up_at: string | null;
+  delivered_at: string | null;
+  shopper_id: string | null;
+  // commission_amount is only visible if user is assigned shopper
+  commission_amount?: number | null;
   order?: Order;
 }
 
 export const useShopperJobs = () => {
   const { user, addRole } = useAuth();
   const [shopper, setShopper] = useState<Shopper | null>(null);
-  const [availableJobs, setAvailableJobs] = useState<JobWithOrder[]>([]);
-  const [myJobs, setMyJobs] = useState<JobWithOrder[]>([]);
+  const [availableJobs, setAvailableJobs] = useState<SafeJobWithOrder[]>([]);
+  const [myJobs, setMyJobs] = useState<SafeJobWithOrder[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper to filter sensitive data from jobs
+  const sanitizeJob = (job: ShopperJob & { orders?: any }, isAssigned: boolean): SafeJobWithOrder => {
+    const safeJob: SafeJobWithOrder = {
+      id: job.id,
+      order_id: job.order_id,
+      status: job.status,
+      created_at: job.created_at,
+      accepted_at: job.accepted_at,
+      picked_up_at: job.picked_up_at,
+      delivered_at: job.delivered_at,
+      shopper_id: job.shopper_id,
+      order: job.orders as Order | undefined,
+    };
+    
+    // Only show commission if user is the assigned shopper
+    if (isAssigned) {
+      safeJob.commission_amount = job.commission_amount;
+    }
+    
+    return safeJob;
+  };
 
   useEffect(() => {
     if (!user) {
@@ -38,18 +71,18 @@ export const useShopperJobs = () => {
 
       setShopper(shopperData);
 
-      // Fetch available jobs
+      // Fetch available jobs - WITHOUT commission_amount for unassigned jobs
       const { data: availableData } = await supabase
         .from("shopper_jobs")
-        .select("*, orders(*)")
+        .select("id, order_id, status, created_at, accepted_at, picked_up_at, delivered_at, shopper_id, orders(*)")
         .eq("status", "available")
         .is("shopper_id", null);
 
       setAvailableJobs(
-        availableData?.map((j) => ({ ...j, order: j.orders as unknown as Order })) || []
+        availableData?.map((j) => sanitizeJob(j as any, false)) || []
       );
 
-      // Fetch my jobs if shopper exists
+      // Fetch my jobs if shopper exists - WITH commission_amount
       if (shopperData) {
         const { data: myJobsData } = await supabase
           .from("shopper_jobs")
@@ -57,7 +90,7 @@ export const useShopperJobs = () => {
           .eq("shopper_id", shopperData.id);
 
         setMyJobs(
-          myJobsData?.map((j) => ({ ...j, order: j.orders as unknown as Order })) || []
+          myJobsData?.map((j) => sanitizeJob(j as any, true)) || []
         );
       }
 
@@ -77,18 +110,16 @@ export const useShopperJobs = () => {
           table: "shopper_jobs",
         },
         (payload) => {
-          console.log("Job change:", payload);
           if (payload.eventType === "INSERT" && payload.new.status === "available") {
-            // Fetch the full job with order details
             supabase
               .from("shopper_jobs")
-              .select("*, orders(*)")
+              .select("id, order_id, status, created_at, accepted_at, picked_up_at, delivered_at, shopper_id, orders(*)")
               .eq("id", payload.new.id)
               .single()
               .then(({ data }) => {
                 if (data) {
                   setAvailableJobs((prev) => [
-                    { ...data, order: data.orders as unknown as Order },
+                    sanitizeJob(data as any, false),
                     ...prev,
                   ]);
                 }
@@ -148,13 +179,12 @@ export const useShopperJobs = () => {
       return { error };
     }
 
-    // Update order status
+    // Update order status via edge function
     const job = availableJobs.find((j) => j.id === jobId);
     if (job?.order_id) {
-      await supabase
-        .from("orders")
-        .update({ shopper_id: shopper.id, status: "picked_up" })
-        .eq("id", job.order_id);
+      await supabase.functions.invoke("update-order-status", {
+        body: { orderId: job.order_id, newStatus: "picked_up" },
+      });
     }
 
     toast.success("Job accepted!");
@@ -192,7 +222,6 @@ export const useShopperJobs = () => {
       return { error };
     }
 
-    // Update shopper stats
     await supabase
       .from("shoppers")
       .update({ total_deliveries: (shopper.total_deliveries || 0) + 1 })

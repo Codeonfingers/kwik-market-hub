@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { 
   User, 
   Phone, 
@@ -9,9 +9,7 @@ import {
   Loader2, 
   ArrowLeft,
   CheckCircle2,
-  AlertCircle,
-  Upload,
-  X
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
 
-// Validation schemas
+// Validation schemas (kept for UX feedback)
 const phoneSchema = z.string()
   .length(10, "Phone number must be exactly 10 digits")
   .regex(/^0[2-5][0-9]{8}$/, "Invalid Ghanaian phone number");
@@ -65,7 +63,7 @@ const ProfileSettings = () => {
   const fetchProfile = async () => {
     if (!user) return;
     
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", user.id)
@@ -83,7 +81,7 @@ const ProfileSettings = () => {
     setLoading(false);
   };
 
-  const validateForm = () => {
+  const validateFormClient = () => {
     const newErrors: Record<string, string> = {};
     
     if (profile.phone) {
@@ -135,27 +133,43 @@ const ProfileSettings = () => {
   };
 
   const handleSave = async () => {
-    if (!user || !validateForm()) return;
+    if (!user || !validateFormClient()) return;
     
     setSaving(true);
     
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        full_name: profile.fullName,
-        phone: profile.phone,
-        ghana_card_number: profile.ghanaCardNumber,
-        avatar_url: profile.avatarUrl,
-      })
-      .eq("user_id", user.id);
+    try {
+      // Call edge function for server-side validation and update
+      const response = await supabase.functions.invoke("validate-profile", {
+        body: {
+          fullName: profile.fullName,
+          phone: profile.phone,
+          ghanaCardNumber: profile.ghanaCardNumber,
+          avatarUrl: profile.avatarUrl,
+        },
+      });
+
+      if (response.error) {
+        toast.error("Failed to save profile");
+        setSaving(false);
+        return;
+      }
+
+      if (!response.data?.valid) {
+        // Show server-side validation errors
+        if (response.data?.errors) {
+          setErrors(response.data.errors);
+        }
+        toast.error("Please fix the validation errors");
+        setSaving(false);
+        return;
+      }
+
+      toast.success("Profile updated successfully");
+    } catch {
+      toast.error("An error occurred saving profile");
+    }
 
     setSaving(false);
-
-    if (error) {
-      toast.error("Failed to save profile");
-    } else {
-      toast.success("Profile updated successfully");
-    }
   };
 
   if (authLoading || loading) {

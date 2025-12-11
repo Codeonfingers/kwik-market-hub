@@ -1,1 +1,10 @@
 project_id = "rlupmgvqibvfkulfmugq"
+
+[functions.process-payment]
+verify_jwt = false
+
+[functions.update-order-status]
+verify_jwt = false
+
+[functions.validate-profile]
+verify_jwt = false

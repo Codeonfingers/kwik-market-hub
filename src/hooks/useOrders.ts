@@ -30,9 +30,7 @@ export const useOrders = () => {
         .select("*, order_items(*)")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching orders:", error);
-      } else {
+      if (!error) {
         setOrders(data?.map(o => ({ ...o, items: o.order_items })) || []);
       }
       setLoading(false);
@@ -51,7 +49,6 @@ export const useOrders = () => {
           table: "orders",
         },
         (payload) => {
-          console.log("Order change:", payload);
           if (payload.eventType === "INSERT") {
             setOrders((prev) => [payload.new as Order, ...prev]);
           } else if (payload.eventType === "UPDATE") {
@@ -93,7 +90,7 @@ export const useOrders = () => {
         subtotal,
         shopper_fee: shopperFee,
         total,
-        order_number: `KM-${Date.now()}`, // Will be overwritten by trigger
+        order_number: `KM-${Date.now()}`,
       }])
       .select()
       .single();
@@ -124,18 +121,27 @@ export const useOrders = () => {
   };
 
   const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({ status })
-      .eq("id", orderId);
+    try {
+      const response = await supabase.functions.invoke("update-order-status", {
+        body: { orderId, newStatus: status },
+      });
 
-    if (error) {
-      toast.error("Failed to update order status");
-      return { error };
+      if (response.error) {
+        toast.error(response.error.message || "Failed to update order status");
+        return { error: response.error };
+      }
+
+      if (!response.data?.success) {
+        toast.error(response.data?.error || "Status update failed");
+        return { error: new Error(response.data?.error || "Update failed") };
+      }
+
+      toast.success(`Order status updated to ${status}`);
+      return { error: null };
+    } catch (error) {
+      toast.error("An error occurred updating order status");
+      return { error: error instanceof Error ? error : new Error("Unknown error") };
     }
-
-    toast.success(`Order status updated to ${status}`);
-    return { error: null };
   };
 
   return { orders, loading, createOrder, updateOrderStatus };
