@@ -30,8 +30,7 @@ export const usePushNotifications = () => {
         return false;
       }
       return false;
-    } catch (error) {
-      console.error("Error requesting notification permission:", error);
+    } catch {
       toast.error("Failed to enable notifications");
       return false;
     }
@@ -56,8 +55,7 @@ export const usePushNotifications = () => {
         };
 
         return notification;
-      } catch (error) {
-        console.error("Error sending notification:", error);
+      } catch {
         return null;
       }
     },
@@ -66,7 +64,7 @@ export const usePushNotifications = () => {
 
   const notifyNewOrder = useCallback(
     (orderNumber: string) => {
-      sendNotification("New Order Received! 🛒", {
+      sendNotification("New Order Received!", {
         body: `Order ${orderNumber} is waiting for your confirmation`,
         tag: `order-${orderNumber}`,
       });
@@ -94,7 +92,7 @@ export const usePushNotifications = () => {
 
   const notifyNewJob = useCallback(
     (commission: number) => {
-      sendNotification("New Job Available! 💼", {
+      sendNotification("New Job Available!", {
         body: `Earn ₵${commission.toFixed(2)} - Accept now!`,
         tag: "new-job",
       });

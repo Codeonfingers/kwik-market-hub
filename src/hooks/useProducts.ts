@@ -24,9 +24,6 @@ export const useProducts = (vendorId?: string) => {
         supabase.from("categories").select("*"),
       ]);
 
-      if (productsRes.error) console.error("Error fetching products:", productsRes.error);
-      if (categoriesRes.error) console.error("Error fetching categories:", categoriesRes.error);
-
       setProducts(productsRes.data || []);
       setCategories(categoriesRes.data || []);
       setLoading(false);

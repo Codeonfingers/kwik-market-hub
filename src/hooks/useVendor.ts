@@ -19,13 +19,12 @@ export const useVendor = () => {
     }
 
     const fetchVendor = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("vendors")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (error) console.error("Error fetching vendor:", error);
       setVendor(data);
       setLoading(false);
     };
@@ -58,9 +57,7 @@ export const useVendor = () => {
       return { error };
     }
 
-    // Add vendor role
     await addRole("vendor");
-
     setVendor(data);
     toast.success("Vendor profile created!");
     return { data, error: null };

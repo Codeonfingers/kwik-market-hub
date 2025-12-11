@@ -35,8 +35,6 @@ const VoiceOrderInput = ({
 
       mediaRecorder.onstop = async () => {
         setIsProcessing(true);
-        // In a real implementation, you would send the audio to a speech-to-text API
-        // For now, we'll simulate the transcription
         setTimeout(() => {
           const simulatedTranscription = "2 kg tomatoes, 1 bunch of plantain, half kg of fresh tilapia";
           setOrderText((prev) => prev + (prev ? "\n" : "") + simulatedTranscription);
@@ -50,8 +48,7 @@ const VoiceOrderInput = ({
       mediaRecorder.start();
       setIsRecording(true);
       toast.info("Recording... Speak your order");
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
+    } catch {
       toast.error("Could not access microphone. Please check permissions.");
     }
   };
@@ -83,7 +80,6 @@ const VoiceOrderInput = ({
             className="min-h-32 pr-12 resize-none"
           />
           
-          {/* Voice Input Button */}
           <Button
             type="button"
             variant={isRecording ? "destructive" : "secondary"}
@@ -122,7 +118,7 @@ const VoiceOrderInput = ({
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          💡 Tip: You can speak naturally, e.g., "I need 2 kilos of tomatoes and some plantains"
+          Tip: You can speak naturally, e.g., "I need 2 kilos of tomatoes and some plantains"
         </p>
       </CardContent>
     </Card>
