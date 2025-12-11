@@ -5,7 +5,7 @@ import { toast } from "sonner";
 export function useImageUpload() {
   const [uploading, setUploading] = useState(false);
 
-  const uploadImage = async (file: File, bucket: string = "product-images"): Promise<string | null> => {
+  const uploadImage = async (file: File, bucket: string = "product-images"): Promise<{ url: string | null; error: string | null }> => {
     try {
       setUploading(true);
 
@@ -13,14 +13,14 @@ export function useImageUpload() {
       const validTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
       if (!validTypes.includes(file.type)) {
         toast.error("Invalid file type. Please upload a JPG, PNG, WebP, or GIF image.");
-        return null;
+        return { url: null, error: "Invalid file type" };
       }
 
       // Validate file size (max 5MB)
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         toast.error("File too large. Maximum size is 5MB.");
-        return null;
+        return { url: null, error: "File too large" };
       }
 
       // Generate unique file name
@@ -36,7 +36,7 @@ export function useImageUpload() {
       if (uploadError) {
         console.error("Upload error:", uploadError);
         toast.error("Failed to upload image. Please try again.");
-        return null;
+        return { url: null, error: uploadError.message };
       }
 
       // Get public URL
@@ -44,11 +44,11 @@ export function useImageUpload() {
         .from(bucket)
         .getPublicUrl(filePath);
 
-      return data.publicUrl;
+      return { url: data.publicUrl, error: null };
     } catch (error) {
       console.error("Upload error:", error);
       toast.error("An error occurred while uploading the image.");
-      return null;
+      return { url: null, error: "Upload failed" };
     } finally {
       setUploading(false);
     }

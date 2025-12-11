@@ -30,13 +30,13 @@ import OrderTrackingMap from "@/components/tracking/OrderTrackingMap";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShopperJobs } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
-import { useRealtimeShopperNotifications } from "@/hooks/useRealtimeNotifications";
+import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ShopperDashboardNew = () => {
   const { user, addRole } = useAuth();
-  const { jobs, myJobs, acceptJob, completeJob, loading } = useShopperJobs();
+  const { availableJobs, myJobs, acceptJob, completeJob, loading } = useShopperJobs();
   const { markets } = useMarkets();
   
   const [shopper, setShopper] = useState<any>(null);
@@ -48,7 +48,7 @@ const ShopperDashboardNew = () => {
   const [onboardingModal, setOnboardingModal] = useState(false);
   const [selectedMarket, setSelectedMarket] = useState("");
 
-  useRealtimeShopperNotifications(shopper?.id);
+  useRealtimeJobNotifications(shopper?.id);
 
   // Fetch shopper profile
   useEffect(() => {
@@ -110,7 +110,7 @@ const ShopperDashboardNew = () => {
 
   const handleAcceptJob = async (job: any) => {
     if (!shopper) return;
-    await acceptJob(job.id, shopper.id);
+    await acceptJob(job.id);
     setCurrentJob(job);
     toast.success("Job accepted!");
   };
@@ -131,9 +131,9 @@ const ShopperDashboardNew = () => {
     );
   }
 
-  const availableJobs = jobs.filter(j => j.status === "available");
+  const jobs = availableJobs;
   const activeJobs = myJobs.filter(j => ["accepted", "in_progress"].includes(j.status));
-  const completedJobs = myJobs.filter(j => j.status === "delivered");
+  const completedJobs = myJobs.filter(j => j.status === "delivered" || j.status === "completed");
   const totalEarnings = completedJobs.reduce((sum, j) => sum + Number(j.commission_amount || 0), 0);
 
   return (
@@ -330,7 +330,7 @@ const ShopperDashboardNew = () => {
                         <div>
                           <p className="font-bold">Order #{job.order?.order_number}</p>
                           <p className="text-sm text-muted-foreground">
-                            {job.order?.items?.length || 0} items
+                            Pickup order
                           </p>
                         </div>
                         <div className="text-right">
@@ -344,7 +344,7 @@ const ShopperDashboardNew = () => {
                       <div className="p-3 bg-muted/50 rounded-lg mb-4">
                         <div className="flex items-center gap-2 text-sm">
                           <MapPin className="w-4 h-4 text-primary" />
-                          <span>{job.order?.market?.name || "Market"}</span>
+                          <span>{markets.find(m => m.id === job.order?.market_id)?.name || "Market"}</span>
                         </div>
                       </div>
 
@@ -408,9 +408,9 @@ const ShopperDashboardNew = () => {
             </DialogHeader>
             <div className="h-80">
               <OrderTrackingMap
-                shopperLocation={{ lat: 5.6037, lng: -0.1870 }}
-                marketLocation={{ lat: 5.5500, lng: -0.2000 }}
-                customerLocation={{ lat: 5.6200, lng: -0.1750 }}
+                shopperLocation={{ lat: 5.6037, lng: -0.1870, label: "Your Location" }}
+                marketLocation={{ lat: 5.5500, lng: -0.2000, label: "Market" }}
+                customerLocation={{ lat: 5.6200, lng: -0.1750, label: "Customer" }}
                 orderStatus="picked_up"
               />
             </div>

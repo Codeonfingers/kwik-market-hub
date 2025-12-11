@@ -117,9 +117,9 @@ const VendorDashboard = () => {
     reader.readAsDataURL(file);
 
     // Upload
-    const url = await uploadImage(file);
-    if (url) {
-      setProductForm({ ...productForm, imageUrl: url });
+    const result = await uploadImage(file);
+    if (result.url) {
+      setProductForm({ ...productForm, imageUrl: result.url });
       toast.success("Image uploaded successfully");
     }
   };

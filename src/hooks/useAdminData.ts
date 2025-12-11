@@ -28,10 +28,13 @@ interface Dispute {
   description: string;
 }
 
+type Market = Database["public"]["Tables"]["markets"]["Row"];
+
 export const useAdminData = () => {
   const [vendors, setVendors] = useState<VendorWithProfile[]>([]);
   const [shoppers, setShoppers] = useState<ShopperWithProfile[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [markets, setMarkets] = useState<Market[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -50,14 +53,16 @@ export const useAdminData = () => {
 
   const fetchAllData = async () => {
     try {
-      const [vendorsRes, shoppersRes, ordersRes] = await Promise.all([
+      const [vendorsRes, shoppersRes, ordersRes, marketsRes] = await Promise.all([
         supabase.from("vendors").select("*"),
         supabase.from("shoppers").select("*"),
         supabase.from("orders").select("*").order("created_at", { ascending: false }),
+        supabase.from("markets").select("*"),
       ]);
 
       if (vendorsRes.data) setVendors(vendorsRes.data);
       if (shoppersRes.data) setShoppers(shoppersRes.data);
+      if (marketsRes.data) setMarkets(marketsRes.data);
       if (ordersRes.data) {
         setOrders(ordersRes.data);
         
@@ -76,7 +81,7 @@ export const useAdminData = () => {
           pendingVerifications:
             (vendorsRes.data?.filter((v) => !v.is_verified).length || 0) +
             (shoppersRes.data?.filter((s) => !s.is_verified).length || 0),
-          openDisputes: 0, // TODO: Add disputes table
+          openDisputes: 0,
         });
       }
     } catch (error) {
@@ -182,10 +187,45 @@ export const useAdminData = () => {
     return { error: null };
   };
 
+  const updateVendorStatus = async (vendorId: string, updates: { is_verified?: boolean; is_active?: boolean }) => {
+    const { error } = await supabase
+      .from("vendors")
+      .update(updates)
+      .eq("id", vendorId);
+
+    if (error) {
+      toast.error("Failed to update vendor");
+      return { error };
+    }
+
+    setVendors((prev) =>
+      prev.map((v) => (v.id === vendorId ? { ...v, ...updates } : v))
+    );
+    return { error: null };
+  };
+
+  const updateShopperStatus = async (shopperId: string, updates: { is_verified?: boolean; is_available?: boolean }) => {
+    const { error } = await supabase
+      .from("shoppers")
+      .update(updates)
+      .eq("id", shopperId);
+
+    if (error) {
+      toast.error("Failed to update shopper");
+      return { error };
+    }
+
+    setShoppers((prev) =>
+      prev.map((s) => (s.id === shopperId ? { ...s, ...updates } : s))
+    );
+    return { error: null };
+  };
+
   return {
     vendors,
     shoppers,
     orders,
+    markets,
     disputes,
     stats,
     loading,
@@ -193,6 +233,8 @@ export const useAdminData = () => {
     verifyShopper,
     toggleVendorActive,
     toggleShopperAvailable,
+    updateVendorStatus,
+    updateShopperStatus,
     refetch: fetchAllData,
   };
 };

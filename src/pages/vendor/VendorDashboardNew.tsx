@@ -36,7 +36,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useOrders } from "@/hooks/useOrders";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
-import { useRealtimeVendorNotifications } from "@/hooks/useRealtimeNotifications";
+import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
 import { toast } from "sonner";
 import { OrderStatus } from "@/types";
 
@@ -58,7 +58,7 @@ const VendorDashboardNew = () => {
     businessName: "", marketId: "", stallNumber: "", description: ""
   });
 
-  useRealtimeVendorNotifications(vendor?.id);
+  useRealtimeOrderNotifications(vendor?.id);
 
   useEffect(() => {
     if (!vendorLoading && !vendor && user) {
@@ -99,9 +99,11 @@ const VendorDashboardNew = () => {
       price: parseFloat(newProduct.price),
       unit: newProduct.unit,
       description: newProduct.description,
-      category_id: newProduct.category_id || undefined,
-      image_url: newProduct.image_url || undefined,
+      category_id: newProduct.category_id || null,
+      image_url: newProduct.image_url || null,
       vendor_id: vendor.id,
+      is_available: true,
+      stock_quantity: 100,
     });
     setProductModal(false);
     setNewProduct({ name: "", price: "", unit: "piece", description: "", category_id: "", image_url: "" });
@@ -592,7 +594,22 @@ const VendorDashboardNew = () => {
 
           {/* Stock Tab */}
           <TabsContent value="stock" className="mt-6">
-            <StockManagement />
+            <StockManagement 
+              products={products.map(p => ({
+                id: p.id,
+                name: p.name,
+                price: Number(p.price),
+                stock_quantity: p.stock_quantity,
+                is_available: p.is_available,
+                image_url: p.image_url,
+              }))}
+              onUpdateStock={async (productId, quantity) => {
+                await updateProduct(productId, { stock_quantity: quantity });
+              }}
+              onToggleAvailability={async (productId, available) => {
+                await updateProduct(productId, { is_available: available });
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>

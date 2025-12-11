@@ -305,7 +305,7 @@ const AdminDashboardNew = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{vendor.market?.name || "-"}</TableCell>
+                        <TableCell>{markets.find(m => m.id === vendor.market_id)?.name || "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <StatusBadge status={vendor.is_verified ? "verified" : "unverified"} />
@@ -383,7 +383,7 @@ const AdminDashboardNew = () => {
                           <p className="font-medium">Shopper</p>
                           <p className="text-xs text-muted-foreground">{shopper.id.slice(0, 8)}...</p>
                         </TableCell>
-                        <TableCell>{shopper.market?.name || "-"}</TableCell>
+                        <TableCell>{markets.find(m => m.id === shopper.market_id)?.name || "-"}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <StatusBadge status={shopper.is_verified ? "verified" : "unverified"} />
@@ -447,18 +447,14 @@ const AdminDashboardNew = () => {
                         </div>
                         <StatusBadge status={order.status as any} />
                       </div>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Items</p>
-                          <p className="font-medium">{order.items?.length || 0}</p>
-                        </div>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-muted-foreground">Total</p>
                           <p className="font-medium">₵{Number(order.total).toFixed(2)}</p>
                         </div>
                         <div>
                           <p className="text-muted-foreground">Market</p>
-                          <p className="font-medium">{order.market?.name || "-"}</p>
+                          <p className="font-medium">{markets.find(m => m.id === order.market_id)?.name || "-"}</p>
                         </div>
                       </div>
                     </CardContent>

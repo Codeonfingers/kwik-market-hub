@@ -473,6 +473,7 @@ const CustomerDashboard = () => {
           onClose={() => setPaymentModal({ open: false, orderId: "", amount: 0 })}
           orderId={paymentModal.orderId}
           amount={paymentModal.amount}
+          onSuccess={() => setPaymentModal({ open: false, orderId: "", amount: 0 })}
         />
 
         <Dialog open={trackingOrder.open} onOpenChange={(open) => setTrackingOrder({ open, order: open ? trackingOrder.order : null })}>
@@ -483,9 +484,9 @@ const CustomerDashboard = () => {
             {trackingOrder.order && (
               <div className="h-80">
                 <OrderTrackingMap
-                  shopperLocation={{ lat: 5.6037, lng: -0.1870 }}
-                  marketLocation={{ lat: 5.5500, lng: -0.2000 }}
-                  customerLocation={{ lat: 5.6200, lng: -0.1750 }}
+                  shopperLocation={{ lat: 5.6037, lng: -0.1870, label: "Shopper" }}
+                  marketLocation={{ lat: 5.5500, lng: -0.2000, label: "Market" }}
+                  customerLocation={{ lat: 5.6200, lng: -0.1750, label: "Delivery" }}
                   orderStatus={trackingOrder.order.status}
                 />
               </div>

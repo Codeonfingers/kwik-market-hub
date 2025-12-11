@@ -81,5 +81,16 @@ export const useProducts = (vendorId?: string) => {
     return { error: null };
   };
 
-  return { products, categories, loading, createProduct, updateProduct, deleteProduct };
+  const refetch = async () => {
+    setLoading(true);
+    let query = supabase.from("products").select("*");
+    if (vendorId) {
+      query = query.eq("vendor_id", vendorId);
+    }
+    const { data } = await query;
+    setProducts(data || []);
+    setLoading(false);
+  };
+
+  return { products, categories, loading, createProduct, updateProduct, deleteProduct, refetch };
 };

@@ -237,3 +237,9 @@ export const useRealtimeConsumerNotifications = (consumerId: string | undefined)
     };
   }, [consumerId]);
 };
+
+// Alias for vendor notifications
+export const useRealtimeVendorNotifications = useRealtimeOrderNotifications;
+
+// Alias for shopper notifications
+export const useRealtimeShopperNotifications = useRealtimeJobNotifications;
