@@ -31,7 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import StatsCard from "@/components/shared/StatsCard";
 import OrderTrackingMap from "@/components/tracking/OrderTrackingMap";
 import { useAuth } from "@/contexts/AuthContext";
-import { useShopperJobs, JobWithOrder } from "@/hooks/useShopperJobs";
+import { useShopperJobs, SafeJobWithOrder } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
@@ -45,7 +45,7 @@ const ShopperApp = () => {
   const { markets } = useMarkets();
   
   const [isAvailable, setIsAvailable] = useState(true);
-  const [currentJob, setCurrentJob] = useState<JobWithOrder | null>(null);
+  const [currentJob, setCurrentJob] = useState<SafeJobWithOrder | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedMarketId, setSelectedMarketId] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -82,7 +82,7 @@ const ShopperApp = () => {
     }
   };
 
-  const handleAcceptJob = async (job: JobWithOrder) => {
+  const handleAcceptJob = async (job: SafeJobWithOrder) => {
     const { error } = await acceptJob(job.id);
     if (!error) {
       setCurrentJob(job);
