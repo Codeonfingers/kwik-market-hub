@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { DEV_MODE_NO_AUTH, getDemoUserForRole } from "./DevModeContext";
 
 type AppRole = "consumer" | "vendor" | "shopper" | "admin";
 
@@ -17,6 +18,19 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// Create a mock user for dev mode
+const createMockUser = (role: AppRole): User => {
+  const demoUser = getDemoUserForRole(role);
+  return {
+    id: demoUser.id,
+    email: demoUser.email,
+    app_metadata: {},
+    user_metadata: { full_name: demoUser.name },
+    aud: "authenticated",
+    created_at: new Date().toISOString(),
+  } as User;
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,14 +50,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    // DEV MODE: Skip auth entirely and use mock data
+    if (DEV_MODE_NO_AUTH) {
+      const storedRole = localStorage.getItem("kwikmarket_dev_role") as AppRole || "consumer";
+      const mockUser = createMockUser(storedRole);
+      setUser(mockUser);
+      setRoles([storedRole]);
+      setLoading(false);
+      
+      // Listen for role changes in dev mode
+      const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === "kwikmarket_dev_role" && e.newValue) {
+          const newRole = e.newValue as AppRole;
+          setUser(createMockUser(newRole));
+          setRoles([newRole]);
+        }
+      };
+      window.addEventListener("storage", handleStorageChange);
+      
+      // Also check periodically for same-tab changes
+      const interval = setInterval(() => {
+        const currentRole = localStorage.getItem("kwikmarket_dev_role") as AppRole || "consumer";
+        if (!roles.includes(currentRole)) {
+          setUser(createMockUser(currentRole));
+          setRoles([currentRole]);
+        }
+      }, 500);
+      
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        clearInterval(interval);
+      };
+    }
+
+    // PRODUCTION MODE: Normal auth flow
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer role fetching with setTimeout to avoid deadlock
           setTimeout(() => {
             fetchRoles(session.user.id);
           }, 0);
@@ -54,7 +100,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -68,6 +113,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
+    if (DEV_MODE_NO_AUTH) {
+      return { error: null };
+    }
+    
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -83,6 +132,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signIn = async (email: string, password: string) => {
+    if (DEV_MODE_NO_AUTH) {
+      return { error: null };
+    }
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -92,6 +145,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (DEV_MODE_NO_AUTH) {
+      return;
+    }
+    
     await supabase.auth.signOut();
     setRoles([]);
   };
@@ -99,6 +156,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasRole = (role: AppRole) => roles.includes(role);
 
   const addRole = async (role: AppRole) => {
+    if (DEV_MODE_NO_AUTH) {
+      setRoles((prev) => [...prev, role]);
+      return { error: null };
+    }
+    
     if (!user) return { error: new Error("Not authenticated") };
     
     const { error } = await supabase
