@@ -34,8 +34,21 @@ import StatusBadge from "@/components/shared/StatusBadge";
 import OrderFilters from "@/components/shared/OrderFilters";
 import { useAdminData } from "@/hooks/useAdminData";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
+
+// Map routes to tabs
+const routeToTab: Record<string, string> = {
+  "/admin": "overview",
+  "/admin/vendors": "vendors",
+  "/admin/shoppers": "shoppers",
+  "/admin/orders": "orders",
+  "/admin/markets": "overview",
+  "/admin/disputes": "overview",
+};
 
 const AdminDashboardNew = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { 
     vendors, 
     shoppers, 
@@ -47,7 +60,25 @@ const AdminDashboardNew = () => {
     refetch 
   } = useAdminData();
 
-  const [activeTab, setActiveTab] = useState("overview");
+  // Sync tab with URL
+  const getTabFromPath = () => routeToTab[location.pathname] || "overview";
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+  
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+  
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const routes: Record<string, string> = {
+      overview: "/admin",
+      vendors: "/admin/vendors",
+      shoppers: "/admin/shoppers",
+      orders: "/admin/orders",
+    };
+    if (routes[tab]) navigate(routes[tab]);
+  };
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState<any>(null);
@@ -152,7 +183,7 @@ const AdminDashboardNew = () => {
         )}
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vendors">

@@ -38,17 +38,49 @@ import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
 import { OrderStatus } from "@/types";
+
+// Map routes to tabs
+const routeToTab: Record<string, string> = {
+  "/vendor": "overview",
+  "/vendor/orders": "orders",
+  "/vendor/catalog": "catalog",
+  "/vendor/stock": "stock",
+  "/vendor/earnings": "overview",
+  "/vendor/performance": "overview",
+  "/vendor/settings": "overview",
+};
 
 const VendorDashboardNew = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { vendor, loading: vendorLoading, createVendor } = useVendor();
   const { products, categories, createProduct, updateProduct, deleteProduct, loading: productsLoading, refetch: refetchProducts } = useProducts(vendor?.id);
   const { orders, loading: ordersLoading, updateOrderStatus } = useOrders();
   const { markets } = useMarkets();
   const { uploadImage, uploading } = useImageUpload();
   
-  const [activeTab, setActiveTab] = useState("overview");
+  // Sync tab with URL
+  const getTabFromPath = () => routeToTab[location.pathname] || "overview";
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+  
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+  
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const routes: Record<string, string> = {
+      overview: "/vendor",
+      orders: "/vendor/orders",
+      catalog: "/vendor/catalog",
+      stock: "/vendor/stock",
+    };
+    if (routes[tab]) navigate(routes[tab]);
+  };
+  
   const [productModal, setProductModal] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: "", price: "", unit: "piece", description: "", category_id: "", image_url: ""
@@ -249,7 +281,7 @@ const VendorDashboardNew = () => {
         )}
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
