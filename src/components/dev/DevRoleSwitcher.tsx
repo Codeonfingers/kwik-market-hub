@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDevMode, DEV_MODE_NO_AUTH } from "@/contexts/DevModeContext";
+import { useDevSettings } from "@/contexts/DevSettingsContext";
 
 type AppRole = "consumer" | "vendor" | "shopper" | "admin";
 
@@ -43,6 +44,7 @@ const DevRoleSwitcher = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { currentRole, setCurrentRole, demoUser } = useDevMode();
+  const { useMockData, mockApiDelay, simulateErrors } = useDevSettings();
 
   // Don't show if dev mode is disabled
   if (!DEV_MODE_NO_AUTH) return null;
@@ -61,9 +63,13 @@ const DevRoleSwitcher = () => {
   return (
     <>
       {/* Dev Mode Banner */}
-      <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 text-center py-1 px-4 text-xs font-semibold flex items-center justify-center gap-2">
+      <div className="fixed top-0 left-0 right-0 z-[100] bg-amber-500 text-amber-950 text-center py-1 px-4 text-xs font-semibold flex items-center justify-center gap-2 flex-wrap">
         <AlertTriangle className="w-3 h-3" />
-        DEV MODE — AUTH DISABLED — {demoUser.name}
+        <span>DEV MODE — AUTH DISABLED — {demoUser.name}</span>
+        <span className="hidden sm:inline">|</span>
+        <span className="text-amber-800">
+          Mock: {useMockData ? "ON" : "OFF"} | Delay: {mockApiDelay}ms {simulateErrors && "| Errors: ON"}
+        </span>
         <AlertTriangle className="w-3 h-3" />
       </div>
 

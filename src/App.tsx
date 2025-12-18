@@ -5,7 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { DevModeProvider } from "@/contexts/DevModeContext";
+import { DevSettingsProvider } from "@/contexts/DevSettingsContext";
 import DevRoleSwitcher from "@/components/dev/DevRoleSwitcher";
+import DevSettingsPanel from "@/components/dev/DevSettingsPanel";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleRedirect from "@/components/auth/RoleRedirect";
 import Index from "./pages/Index";
@@ -25,14 +27,16 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <DevModeProvider>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <DevRoleSwitcher />
-            <div className="pt-6">
-              <Routes>
+      <DevSettingsProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <DevRoleSwitcher />
+              <DevSettingsPanel />
+              <div className="pt-6">
+                <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/markets" element={<Markets />} />
@@ -95,12 +99,13 @@ const App = () => (
                   </ProtectedRoute>
                 } />
                 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </div>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </div>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </DevSettingsProvider>
     </DevModeProvider>
   </QueryClientProvider>
 );
