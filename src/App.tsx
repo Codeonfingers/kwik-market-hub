@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DevModeProvider } from "@/contexts/DevModeContext";
+import DevRoleSwitcher from "@/components/dev/DevRoleSwitcher";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RoleRedirect from "@/components/auth/RoleRedirect";
 import Index from "./pages/Index";
@@ -22,79 +24,84 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/markets" element={<Markets />} />
-            <Route path="/markets/:id" element={<Markets />} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/subscriptions" element={<Subscriptions />} />
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Smart redirect for authenticated users */}
-            <Route path="/dashboard" element={<RoleRedirect />} />
-            
-            {/* Profile settings - any authenticated user */}
-            <Route path="/profile" element={<ProfileSettings />} />
-            
-            {/* Customer routes */}
-            <Route path="/customer" element={
-              <ProtectedRoute requiredRole="consumer">
-                <CustomerDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/customer/*" element={
-              <ProtectedRoute requiredRole="consumer">
-                <CustomerDashboard />
-              </ProtectedRoute>
-            } />
-            
-            {/* Vendor routes */}
-            <Route path="/vendor" element={
-              <ProtectedRoute requiredRole="vendor">
-                <VendorDashboardNew />
-              </ProtectedRoute>
-            } />
-            <Route path="/vendor/*" element={
-              <ProtectedRoute requiredRole="vendor">
-                <VendorDashboardNew />
-              </ProtectedRoute>
-            } />
-            
-            {/* Shopper routes */}
-            <Route path="/shopper" element={
-              <ProtectedRoute requiredRole="shopper">
-                <ShopperDashboardNew />
-              </ProtectedRoute>
-            } />
-            <Route path="/shopper/*" element={
-              <ProtectedRoute requiredRole="shopper">
-                <ShopperDashboardNew />
-              </ProtectedRoute>
-            } />
-            
-            {/* Admin routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboardNew />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/*" element={
-              <ProtectedRoute requiredRole="admin">
-                <AdminDashboardNew />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
+    <DevModeProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <DevRoleSwitcher />
+            <div className="pt-6">
+              <Routes>
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/markets" element={<Markets />} />
+                <Route path="/markets/:id" element={<Markets />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/subscriptions" element={<Subscriptions />} />
+                <Route path="/auth" element={<Auth />} />
+                
+                {/* Smart redirect for authenticated users */}
+                <Route path="/dashboard" element={<RoleRedirect />} />
+                
+                {/* Profile settings - any authenticated user */}
+                <Route path="/profile" element={<ProfileSettings />} />
+                
+                {/* Consumer routes */}
+                <Route path="/consumer" element={
+                  <ProtectedRoute requiredRole="consumer">
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/consumer/*" element={
+                  <ProtectedRoute requiredRole="consumer">
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Vendor routes */}
+                <Route path="/vendor" element={
+                  <ProtectedRoute requiredRole="vendor">
+                    <VendorDashboardNew />
+                  </ProtectedRoute>
+                } />
+                <Route path="/vendor/*" element={
+                  <ProtectedRoute requiredRole="vendor">
+                    <VendorDashboardNew />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Shopper routes */}
+                <Route path="/shopper" element={
+                  <ProtectedRoute requiredRole="shopper">
+                    <ShopperDashboardNew />
+                  </ProtectedRoute>
+                } />
+                <Route path="/shopper/*" element={
+                  <ProtectedRoute requiredRole="shopper">
+                    <ShopperDashboardNew />
+                  </ProtectedRoute>
+                } />
+                
+                {/* Admin routes */}
+                <Route path="/admin" element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboardNew />
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin/*" element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboardNew />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </DevModeProvider>
   </QueryClientProvider>
 );
 

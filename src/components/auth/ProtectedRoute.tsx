@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { DEV_MODE_NO_AUTH } from "@/contexts/DevModeContext";
 
 type AppRole = "consumer" | "vendor" | "shopper" | "admin";
 
@@ -20,17 +21,32 @@ const ProtectedRoute = ({
   const { user, loading, roles, hasRole } = useAuth();
 
   useEffect(() => {
+    // DEV MODE: Skip all auth checks
+    if (DEV_MODE_NO_AUTH) {
+      // In dev mode, if a role is required but user doesn't have it,
+      // redirect to the correct dashboard based on their dev role
+      if (requiredRole && !hasRole(requiredRole)) {
+        const devRole = localStorage.getItem("kwikmarket_dev_role") as AppRole || "consumer";
+        const roleRoutes: Record<AppRole, string> = {
+          admin: "/admin",
+          vendor: "/vendor",
+          shopper: "/shopper",
+          consumer: "/consumer",
+        };
+        navigate(roleRoutes[devRole], { replace: true });
+      }
+      return;
+    }
+
+    // PRODUCTION MODE: Normal auth checks
     if (loading) return;
 
-    // Not authenticated
     if (!user) {
       navigate(redirectTo, { replace: true });
       return;
     }
 
-    // Role check if required
     if (requiredRole && !hasRole(requiredRole)) {
-      // Redirect to appropriate dashboard based on their actual role
       if (hasRole("admin")) {
         navigate("/admin", { replace: true });
       } else if (hasRole("vendor")) {
@@ -43,6 +59,15 @@ const ProtectedRoute = ({
     }
   }, [user, loading, roles, requiredRole, hasRole, navigate, redirectTo]);
 
+  // DEV MODE: Always render children (with role check for redirect)
+  if (DEV_MODE_NO_AUTH) {
+    if (requiredRole && !hasRole(requiredRole)) {
+      return null;
+    }
+    return <>{children}</>;
+  }
+
+  // PRODUCTION MODE: Show loading and auth checks
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -51,12 +76,10 @@ const ProtectedRoute = ({
     );
   }
 
-  // Check authentication
   if (!user) {
     return null;
   }
 
-  // Check role if required
   if (requiredRole && !hasRole(requiredRole)) {
     return null;
   }
