@@ -25,13 +25,14 @@ type MockApiResult<T> = {
 };
 
 export const useMockDataEnabled = () => {
-  const { useMockData, isDevMode } = useDevSettings();
-  return isDevMode && useMockData;
+  const { useMockData: mockDataEnabled, isDevMode } = useDevSettings();
+  return isDevMode && mockDataEnabled;
 };
 
 // Hook to wrap API calls with dev settings (delay, error simulation)
 export const useDevApiWrapper = () => {
-  const { mockApiDelay, simulateErrors, errorType } = useDevSettings();
+  const { mockApiDelay, simulateErrors, errorType, useMockData: mockDataEnabled, isDevMode } = useDevSettings();
+  const shouldUseMock = isDevMode && mockDataEnabled;
 
   const wrapApiCall = async <T>(
     realApiCall: () => Promise<T>,
@@ -66,11 +67,41 @@ export const useDevApiWrapper = () => {
     return realApiCall();
   };
 
-  return { wrapApiCall };
+  return { wrapApiCall, shouldUseMock };
 };
 
-// Consumer Dashboard Mock Data
-export const useMockConsumerData = () => {
+// Hook for shopper-specific mock data with profile
+export const useMockShopperWithProfile = () => {
+  const isMockEnabled = useMockDataEnabled();
+  
+  if (!isMockEnabled) return null;
+
+  const activeJobs = mockActiveJobs;
+  const completedJobs = mockCompletedJobs;
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + Number(j.commission_amount || 0), 0);
+
+  return {
+    shopper: mockShopper,
+    availableJobs: mockAvailableJobs,
+    activeJobs,
+    completedJobs,
+    markets,
+    totalEarnings,
+    todayEarnings: completedJobs
+      .filter(j => {
+        const today = new Date().toDateString();
+        return new Date(j.delivered_at || "").toDateString() === today;
+      })
+      .reduce((sum, j) => sum + Number(j.commission_amount || 0), 0),
+    todayCompleted: completedJobs.filter(j => {
+      const today = new Date().toDateString();
+      return new Date(j.delivered_at || "").toDateString() === today;
+    }).length,
+  };
+};
+
+// Hook for consumer-specific mock data with profile  
+export const useMockConsumerWithProfile = () => {
   const isMockEnabled = useMockDataEnabled();
   
   if (!isMockEnabled) return null;
@@ -82,6 +113,39 @@ export const useMockConsumerData = () => {
     pendingOrders: mockConsumerOrders.filter(o => ["pending", "accepted", "preparing"].includes(o.status)),
     activeOrders: mockConsumerOrders.filter(o => ["ready", "picked_up", "inspecting"].includes(o.status)),
     completedOrders: mockConsumerOrders.filter(o => o.status === "completed"),
+  };
+};
+
+// Consumer Dashboard Mock Data (legacy - use useMockConsumerWithProfile)
+export const useMockConsumerData = () => {
+  return useMockConsumerWithProfile();
+};
+
+// Vendor Dashboard Mock Data with profile
+export const useMockVendorWithProfile = () => {
+  const isMockEnabled = useMockDataEnabled();
+  
+  if (!isMockEnabled) return null;
+
+  const vendorOrders = mockVendorOrders;
+  const pendingOrders = vendorOrders.filter(o => o.status === "pending");
+  const todayOrders = vendorOrders.filter(o => {
+    const today = new Date().toDateString();
+    return new Date(o.created_at).toDateString() === today;
+  });
+  const completedOrders = vendorOrders.filter(o => o.status === "completed");
+  const totalEarnings = completedOrders.reduce((sum, o) => sum + Number(o.subtotal || 0), 0);
+
+  return {
+    vendor: mockVendor,
+    products: mockVendorProducts,
+    orders: vendorOrders,
+    categories,
+    markets,
+    pendingOrders,
+    todayOrders,
+    completedOrders,
+    totalEarnings,
   };
 };
 
@@ -164,6 +228,7 @@ export const useMockAdminData = () => {
       is_active: true,
       rating: 4.5,
       total_orders: Math.floor(Math.random() * 100),
+      stall_number: "A" + Math.floor(Math.random() * 50),
     })),
     shoppers: mockAdminUsers.filter(u => u.role === "shopper").map(u => ({
       id: u.id,

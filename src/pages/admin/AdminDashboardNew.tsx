@@ -33,6 +33,7 @@ import DashboardCard from "@/components/shared/DashboardCard";
 import StatusBadge from "@/components/shared/StatusBadge";
 import OrderFilters from "@/components/shared/OrderFilters";
 import { useAdminData } from "@/hooks/useAdminData";
+import { useMockAdminData, useMockDataEnabled } from "@/hooks/useMockData";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -49,16 +50,29 @@ const routeToTab: Record<string, string> = {
 const AdminDashboardNew = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Check if mock data should be used
+  const isMockEnabled = useMockDataEnabled();
+  const mockData = useMockAdminData();
+  
+  // Real data hooks
   const { 
-    vendors, 
-    shoppers, 
-    orders, 
-    markets, 
-    loading, 
+    vendors: realVendors, 
+    shoppers: realShoppers, 
+    orders: realOrders, 
+    markets: realMarkets, 
+    loading: realLoading, 
     updateVendorStatus, 
     updateShopperStatus,
     refetch 
   } = useAdminData();
+
+  // Use mock or real data
+  const vendors = isMockEnabled && mockData ? mockData.vendors : realVendors;
+  const shoppers = isMockEnabled && mockData ? mockData.shoppers : realShoppers;
+  const orders = isMockEnabled && mockData ? mockData.orders : realOrders;
+  const markets = isMockEnabled && mockData ? mockData.markets : realMarkets;
+  const loading = isMockEnabled ? false : realLoading;
 
   // Sync tab with URL
   const getTabFromPath = () => routeToTab[location.pathname] || "overview";
@@ -277,7 +291,7 @@ const AdminDashboardNew = () => {
               <Card className="text-center p-4">
                 <p className="text-muted-foreground text-sm">Markets</p>
                 <p className="text-3xl font-display font-bold">{markets.length}</p>
-                <p className="text-xs text-success">{markets.filter(m => m.is_active).length} active</p>
+                <p className="text-xs text-success">{markets.filter(m => (m as any).is_active !== false).length} active</p>
               </Card>
             </div>
           </TabsContent>

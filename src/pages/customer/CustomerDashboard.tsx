@@ -40,6 +40,8 @@ import { useProducts } from "@/hooks/useProducts";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useRatings } from "@/hooks/useRatings";
 import { useRealtimeConsumerNotifications } from "@/hooks/useRealtimeNotifications";
+import { useMockConsumerData, useMockDataEnabled } from "@/hooks/useMockData";
+import { DEV_MODE_NO_AUTH } from "@/contexts/DevModeContext";
 import { toast } from "sonner";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { OrderStatus } from "@/types";
@@ -65,10 +67,22 @@ const CustomerDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { orders, loading: ordersLoading, createOrder } = useOrders();
-  const { products, categories, loading: productsLoading } = useProducts();
-  const { markets, loading: marketsLoading } = useMarkets();
+  
+  // Check if mock data should be used
+  const isMockEnabled = useMockDataEnabled();
+  const mockData = useMockConsumerData();
+  
+  // Real data hooks
+  const { orders: realOrders, loading: ordersLoading, createOrder } = useOrders();
+  const { products: realProducts, categories: realCategories, loading: productsLoading } = useProducts();
+  const { markets: realMarkets, loading: marketsLoading } = useMarkets();
   const { hasRatedOrder } = useRatings();
+  
+  // Use mock or real data
+  const orders = isMockEnabled && mockData ? mockData.orders : realOrders;
+  const products = isMockEnabled && mockData ? [] : realProducts; // Products need vendor data
+  const categories = isMockEnabled && mockData ? mockData.categories : realCategories;
+  const markets = isMockEnabled && mockData ? mockData.markets : realMarkets;
 
   const [selectedMarketId, setSelectedMarketId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -148,11 +162,11 @@ const CustomerDashboard = () => {
     }
   };
 
-  const pendingOrders = orders.filter(o => ["pending", "accepted", "preparing"].includes(o.status));
-  const activeOrders = orders.filter(o => ["ready", "picked_up", "inspecting"].includes(o.status));
-  const completedOrders = orders.filter(o => o.status === "completed");
+  const pendingOrders = (isMockEnabled && mockData) ? mockData.pendingOrders : orders.filter(o => ["pending", "accepted", "preparing"].includes(o.status));
+  const activeOrders = (isMockEnabled && mockData) ? mockData.activeOrders : orders.filter(o => ["ready", "picked_up", "inspecting"].includes(o.status));
+  const completedOrders = (isMockEnabled && mockData) ? mockData.completedOrders : orders.filter(o => o.status === "completed");
 
-  const loading = ordersLoading || productsLoading || marketsLoading;
+  const loading = isMockEnabled ? false : (ordersLoading || productsLoading || marketsLoading);
 
   return (
     <DashboardLayout role="consumer" title="Customer Dashboard">

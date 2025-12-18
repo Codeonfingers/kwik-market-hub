@@ -37,6 +37,8 @@ import { useOrders } from "@/hooks/useOrders";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { useRealtimeOrderNotifications } from "@/hooks/useRealtimeNotifications";
+import { useMockVendorData, useMockDataEnabled } from "@/hooks/useMockData";
+import { DEV_MODE_NO_AUTH } from "@/contexts/DevModeContext";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
 import { OrderStatus } from "@/types";
@@ -56,11 +58,24 @@ const VendorDashboardNew = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { vendor, loading: vendorLoading, createVendor } = useVendor();
-  const { products, categories, createProduct, updateProduct, deleteProduct, loading: productsLoading, refetch: refetchProducts } = useProducts(vendor?.id);
-  const { orders, loading: ordersLoading, updateOrderStatus } = useOrders();
-  const { markets } = useMarkets();
+  
+  // Check if mock data should be used
+  const isMockEnabled = useMockDataEnabled();
+  const mockData = useMockVendorData();
+  
+  // Real data hooks
+  const { vendor: realVendor, loading: vendorLoading, createVendor } = useVendor();
+  const { products: realProducts, categories: realCategories, createProduct, updateProduct, deleteProduct, loading: productsLoading, refetch: refetchProducts } = useProducts(realVendor?.id);
+  const { orders: realOrders, loading: ordersLoading, updateOrderStatus } = useOrders();
+  const { markets: realMarkets } = useMarkets();
   const { uploadImage, uploading } = useImageUpload();
+  
+  // Use mock or real data
+  const vendor = isMockEnabled && mockData ? mockData.vendor : realVendor;
+  const products = isMockEnabled && mockData ? mockData.products : realProducts;
+  const categories = isMockEnabled && mockData ? mockData.categories : realCategories;
+  const orders = isMockEnabled && mockData ? mockData.orders : realOrders;
+  const markets = isMockEnabled && mockData ? mockData.markets : realMarkets;
   
   // Sync tab with URL
   const getTabFromPath = () => routeToTab[location.pathname] || "overview";
@@ -93,10 +108,13 @@ const VendorDashboardNew = () => {
   useRealtimeOrderNotifications(vendor?.id);
 
   useEffect(() => {
+    // Skip onboarding in dev mode
+    if (DEV_MODE_NO_AUTH || isMockEnabled) return;
+    
     if (!vendorLoading && !vendor && user) {
       setOnboardingModal(true);
     }
-  }, [vendor, vendorLoading, user]);
+  }, [vendor, vendorLoading, user, isMockEnabled]);
 
   const handleCreateVendor = async () => {
     if (!onboardingData.businessName || !onboardingData.marketId) {
