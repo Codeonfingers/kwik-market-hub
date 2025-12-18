@@ -31,9 +31,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useShopperJobs } from "@/hooks/useShopperJobs";
 import { useMarkets } from "@/hooks/useMarkets";
 import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
+import { useMockShopperData, useMockDataEnabled } from "@/hooks/useMockData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useLocation, useNavigate } from "react-router-dom";
+import { DEV_MODE_NO_AUTH } from "@/contexts/DevModeContext";
 
 // Map routes to tabs
 const routeToTab: Record<string, string> = {
@@ -48,8 +50,20 @@ const ShopperDashboardNew = () => {
   const { user, addRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { availableJobs, myJobs, acceptJob, completeJob, loading } = useShopperJobs();
-  const { markets } = useMarkets();
+  
+  // Check if mock data should be used
+  const isMockEnabled = useMockDataEnabled();
+  const mockData = useMockShopperData();
+  
+  // Real data hooks - only fetch when not using mock data
+  const { availableJobs: realAvailableJobs, myJobs: realMyJobs, acceptJob, completeJob, loading: realLoading } = useShopperJobs();
+  const { markets: realMarkets } = useMarkets();
+  
+  // Use mock or real data
+  const availableJobs = isMockEnabled && mockData ? mockData.availableJobs : realAvailableJobs;
+  const myJobs = isMockEnabled && mockData ? [...mockData.activeJobs, ...mockData.completedJobs] : realMyJobs;
+  const markets = isMockEnabled && mockData ? mockData.markets : realMarkets;
+  const loading = isMockEnabled ? false : realLoading;
   
   // Sync tab with URL
   const getTabFromPath = () => routeToTab[location.pathname] || "overview";
@@ -69,8 +83,8 @@ const ShopperDashboardNew = () => {
     if (routes[tab]) navigate(routes[tab]);
   };
   
-  const [shopper, setShopper] = useState<any>(null);
-  const [shopperLoading, setShopperLoading] = useState(true);
+  const [shopper, setShopper] = useState<any>(isMockEnabled && mockData ? mockData.shopper : null);
+  const [shopperLoading, setShopperLoading] = useState(!isMockEnabled);
   const [isAvailable, setIsAvailable] = useState(true);
   const [currentJob, setCurrentJob] = useState<any>(null);
   const [mapDialog, setMapDialog] = useState(false);
@@ -79,8 +93,18 @@ const ShopperDashboardNew = () => {
 
   useRealtimeJobNotifications(shopper?.id);
 
-  // Fetch shopper profile
+  // Fetch shopper profile - skip in dev mode with mock data
   useEffect(() => {
+    // Skip profile creation in dev mode
+    if (DEV_MODE_NO_AUTH || isMockEnabled) {
+      if (mockData) {
+        setShopper(mockData.shopper);
+        setIsAvailable(mockData.shopper.is_available ?? true);
+      }
+      setShopperLoading(false);
+      return;
+    }
+
     const fetchShopper = async () => {
       if (!user) return;
       const { data, error } = await supabase
@@ -99,9 +123,16 @@ const ShopperDashboardNew = () => {
     };
 
     fetchShopper();
-  }, [user]);
+  }, [user, isMockEnabled, mockData]);
 
   const handleCreateShopper = async () => {
+    // Skip in dev mode
+    if (DEV_MODE_NO_AUTH) {
+      toast.success("Shopper profile created (dev mode)!");
+      setOnboardingModal(false);
+      return;
+    }
+
     if (!user || !selectedMarket) return;
 
     const { data, error } = await supabase
@@ -126,8 +157,13 @@ const ShopperDashboardNew = () => {
   };
 
   const handleAvailabilityToggle = async (available: boolean) => {
-    if (!shopper) return;
     setIsAvailable(available);
+    
+    // Skip DB update in dev mode
+    if (DEV_MODE_NO_AUTH || !shopper) {
+      toast.success(available ? "You're now available for jobs" : "You're now offline");
+      return;
+    }
     
     await supabase
       .from("shoppers")
