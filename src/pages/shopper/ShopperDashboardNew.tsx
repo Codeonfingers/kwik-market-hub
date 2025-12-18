@@ -33,16 +33,45 @@ import { useMarkets } from "@/hooks/useMarkets";
 import { useRealtimeJobNotifications } from "@/hooks/useRealtimeNotifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLocation, useNavigate } from "react-router-dom";
+
+// Map routes to tabs
+const routeToTab: Record<string, string> = {
+  "/shopper": "overview",
+  "/shopper/jobs": "jobs",
+  "/shopper/earnings": "history",
+  "/shopper/performance": "overview",
+  "/shopper/settings": "overview",
+};
 
 const ShopperDashboardNew = () => {
   const { user, addRole } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { availableJobs, myJobs, acceptJob, completeJob, loading } = useShopperJobs();
   const { markets } = useMarkets();
+  
+  // Sync tab with URL
+  const getTabFromPath = () => routeToTab[location.pathname] || "overview";
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+  
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+  
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const routes: Record<string, string> = {
+      overview: "/shopper",
+      jobs: "/shopper/jobs",
+      history: "/shopper/earnings",
+    };
+    if (routes[tab]) navigate(routes[tab]);
+  };
   
   const [shopper, setShopper] = useState<any>(null);
   const [shopperLoading, setShopperLoading] = useState(true);
   const [isAvailable, setIsAvailable] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
   const [currentJob, setCurrentJob] = useState<any>(null);
   const [mapDialog, setMapDialog] = useState(false);
   const [onboardingModal, setOnboardingModal] = useState(false);
@@ -249,7 +278,7 @@ const ShopperDashboardNew = () => {
         )}
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="jobs">

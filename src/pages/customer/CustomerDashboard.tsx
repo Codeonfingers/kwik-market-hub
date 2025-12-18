@@ -41,8 +41,17 @@ import { useMarkets } from "@/hooks/useMarkets";
 import { useRatings } from "@/hooks/useRatings";
 import { useRealtimeConsumerNotifications } from "@/hooks/useRealtimeNotifications";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { OrderStatus } from "@/types";
+
+// Map routes to tabs
+const routeToTab: Record<string, string> = {
+  "/customer": "overview",
+  "/customer/shop": "shop",
+  "/customer/orders": "orders",
+  "/customer/market": "overview",
+  "/customer/settings": "overview",
+};
 
 interface CartItem {
   productId: string;
@@ -54,6 +63,8 @@ interface CartItem {
 
 const CustomerDashboard = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const { orders, loading: ordersLoading, createOrder } = useOrders();
   const { products, categories, loading: productsLoading } = useProducts();
   const { markets, loading: marketsLoading } = useMarkets();
@@ -63,7 +74,24 @@ const CustomerDashboard = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("overview");
+  
+  // Sync tab with URL
+  const getTabFromPath = () => routeToTab[location.pathname] || "overview";
+  const [activeTab, setActiveTab] = useState(getTabFromPath);
+  
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname]);
+  
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    const routes: Record<string, string> = {
+      overview: "/customer",
+      shop: "/customer/shop",
+      orders: "/customer/orders",
+    };
+    if (routes[tab]) navigate(routes[tab]);
+  };
   
   const [paymentModal, setPaymentModal] = useState<{ open: boolean; orderId: string; amount: number }>({
     open: false, orderId: "", amount: 0,
@@ -159,7 +187,7 @@ const CustomerDashboard = () => {
         </div>
 
         {/* Main Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="shop">Shop</TabsTrigger>
